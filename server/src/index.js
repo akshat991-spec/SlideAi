@@ -59,20 +59,19 @@ app.use((req, res) => {
 // ── Global error handler ──────────────────────────────────────────
 app.use(errorHandler);
 
-// ── Start server ──────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+// Connect to MongoDB
+connectDB().catch(err => {
+  console.error('Failed to connect to MongoDB:', err);
+});
 
-async function start() {
-  await connectDB();
+// ── Start server (Local Dev Only) ─────────────────────────────────
+// Vercel handles the serverless execution using the exported app.
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`🚀  SlideAI server running on http://localhost:${PORT}`);
     console.log(`    Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }
-
-start().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
 
 export default app;

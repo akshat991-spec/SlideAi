@@ -31,7 +31,7 @@ A production-ready, full-stack AI-powered presentation generator built with the 
 | Database    | MongoDB (Mongoose ODM) |
 | Auth        | JWT + HTTP-only Cookies |
 | AI          | Mock AI (swap for Gemini/OpenAI) |
-| Deployment  | Vercel (frontend) + Railway/Render (backend) |
+| Deployment  | Vercel (Frontend & Serverless Backend) |
 
 ## 📁 Project Structure
 
@@ -109,21 +109,18 @@ Open [http://localhost:5173](http://localhost:5173)
 
 ## 🌐 Deployment
 
-### Deploy to Vercel (Frontend)
+### Deploy Full-Stack App to Vercel
+
+The repository is configured to deploy both the React frontend and the Express backend on Vercel in a single deployment!
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/SlideAi)
 
 1. Connect your GitHub repo to Vercel
-2. Set **Root Directory** to `client`
-3. Add environment variable: `VITE_API_URL=https://your-backend.railway.app/api`
-4. Deploy
-
-### Deploy Backend to Railway
-
-1. Connect GitHub repo to [Railway](https://railway.app)
-2. Set root directory to `server`
-3. Add environment variables (from `.env.example`)
-4. Deploy
+2. Leave the **Root Directory** as the repository root (do not change it to `client`)
+3. Add your production environment variables (from `server/.env.example`)
+   - `MONGODB_URI`
+   - `JWT_SECRET`
+4. Deploy! Vercel will build the frontend and serve your Express backend as Serverless Functions via the included `vercel.json`.
 
 ## 🔑 API Endpoints
 

@@ -1,17 +1,17 @@
 import mongoose from 'mongoose';
 
 /**
- * Global variable to cache the database connection across serverless invocations.
+ * Standard Mongoose serverless connection caching pattern for Vercel/AWS Lambda.
  */
-let cachedConnection = null;
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 export async function connectDB() {
-  if (mongoose.connection.readyState >= 1) {
-    return mongoose.connection;
-  }
-
-  if (cachedConnection) {
-    return cachedConnection;
+  if (cached.conn && mongoose.connection.readyState >= 1) {
+    return cached.conn;
   }
 
   const uri = process.env.MONGODB_URI;
@@ -20,15 +20,24 @@ export async function connectDB() {
     throw new Error('MONGODB_URI is not set in environment variables');
   }
 
-  try {
-    cachedConnection = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 8000,
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+    };
+
+    cached.promise = mongoose.connect(uri, opts).then((mongooseInstance) => {
+      console.log(`✅ MongoDB connected: ${mongooseInstance.connection.host}`);
+      return mongooseInstance;
     });
-    console.log(`✅ MongoDB connected: ${mongoose.connection.host}`);
-    return cachedConnection;
-  } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
-    cachedConnection = null;
-    throw err;
   }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
 }

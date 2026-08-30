@@ -2,11 +2,12 @@
 
 A production-ready, full-stack AI-powered presentation generator built with the MERN stack.
 
-![SlideAI](https://img.shields.io/badge/SlideAI-Premium%20Suite-4338ca?style=for-the-badge)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-slide--ai--self.vercel.app-4338ca?style=for-the-badge&logo=vercel)](https://slide-ai-self.vercel.app/)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=nodedotjs)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb)
-![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?style=flat-square&logo=vercel)
+
+🔗 **Live Deployment:** [https://slide-ai-self.vercel.app/](https://slide-ai-self.vercel.app/)
 
 ## 🚀 Features
 
@@ -69,7 +70,7 @@ SlideAi/
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/SlideAi.git
+git clone https://github.com/akshat991-spec/SlideAi.git
 cd SlideAi
 
 # Install client deps

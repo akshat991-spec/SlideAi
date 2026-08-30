@@ -112,16 +112,7 @@ Open [http://localhost:5173](http://localhost:5173)
 
 ### Deploy Full-Stack App to Vercel
 
-The repository is configured to deploy both the React frontend and the Express backend on Vercel in a single deployment!
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/SlideAi)
-
-1. Connect your GitHub repo to Vercel
-2. Leave the **Root Directory** as the repository root (do not change it to `client`)
-3. Add your production environment variables (from `server/.env.example`)
-   - `MONGODB_URI`
-   - `JWT_SECRET`
-4. Deploy! Vercel will build the frontend and serve your Express backend as Serverless Functions via the included `vercel.json`.
+https://slide-ai-self.vercel.app/
 
 ## 🔑 API Endpoints
 

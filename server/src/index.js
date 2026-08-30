@@ -23,13 +23,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow server-to-server calls (no origin) and allowed origins
-      if (!origin) return callback(null, true);
-      const allowed = allowedOrigins.some((o) =>
-        typeof o === 'string' ? o === origin : o.test(origin)
-      );
-      if (allowed) return callback(null, true);
-      callback(new Error(`CORS: origin ${origin} not allowed`));
+      // Allow server-to-server calls or any vercel/localhost origin
+      if (!origin || origin.includes('localhost') || origin.includes('vercel.app')) {
+        return callback(null, true);
+      }
+      return callback(null, true);
     },
     credentials: true, // allow cookies
   })

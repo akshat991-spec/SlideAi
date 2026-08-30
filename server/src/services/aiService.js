@@ -3,9 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 /**
  * SlideAI Intelligent Generation Service.
  *
- * Supports:
- * 1. Real Google Gemini AI (when GEMINI_API_KEY or GOOGLE_API_KEY is configured in .env / Vercel)
- * 2. High-quality intelligent fallback engine if no key is provided
+ * Powered by Google Gemini 1.5 Pro (the flagship model behind NotebookLM)
+ * with NotebookLM-style multi-source document grounding and smart fallback.
  */
 
 function getGeminiClient() {
@@ -14,50 +13,89 @@ function getGeminiClient() {
   return new GoogleGenerativeAI(apiKey);
 }
 
-// ── Real Gemini AI Generation ──────────────────────────────────────
+// ── Real Gemini 1.5 Pro AI Generation (NotebookLM-Style Grounding) ──
 
-async function generateWithGemini(gemini, { prompt, slideCount = 8, tone, presentationType, audience }) {
-  const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+async function generateWithGemini(gemini, {
+  prompt,
+  slideCount = 8,
+  tone = 'Professional',
+  presentationType = 'Pitch Deck',
+  audience = 'General',
+  purpose = 'Inform',
+  language = 'English (US)',
+  referenceUrl = '',
+  notesText = '',
+}) {
+  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+  
+  let model;
+  try {
+    model = gemini.getGenerativeModel({ model: modelName });
+  } catch {
+    model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  }
+
   const count = slideCount > 0 ? slideCount : 8;
 
-  const systemPrompt = `You are an elite presentation designer and McKinsey/TED-level slide creator.
-Generate a cohesive, highly engaging ${count}-slide presentation deck based on this request.
+  // Grounding block (NotebookLM mode)
+  let groundingContext = '';
+  if (notesText && notesText.trim()) {
+    groundingContext += `\n\n--- SOURCE MATERIAL / NOTES (GROUNDING CONTEXT) ---\n${notesText.slice(0, 20000)}\n----------------------------------------------------\n`;
+  }
+  if (referenceUrl && referenceUrl.trim()) {
+    groundingContext += `\nReference Source URL: ${referenceUrl.trim()}\n`;
+  }
+
+  const systemPrompt = `You are an elite presentation designer and McKinsey/TED-level slide creator with the deep analytical synthesis of Google NotebookLM.
+Generate a cohesive, authoritative, and deeply insightful ${count}-slide presentation deck based on the request below.
 
 Topic / Prompt: "${prompt}"
-Presentation Type: ${presentationType || 'Pitch Deck'}
-Target Audience: ${audience || 'General'}
-Tone: ${tone || 'Professional'}
+Presentation Type: ${presentationType}
+Target Audience: ${audience}
+Primary Purpose: ${purpose}
+Tone: ${tone}
+Language: ${language}
 Number of Slides: ${count}
+${groundingContext}
+INSTRUCTIONS FOR NOTEBOOKLM-STYLE SYNTHESIS:
+1. If Source Material/Notes are provided, ground the content strictly in those source insights, data points, and concepts.
+2. Structure the narrative with clear progression: Introduction/Hook ➡️ Core Thesis ➡️ Key Findings & Evidence ➡️ Strategic Framework ➡️ Quantitative Analysis / Visual Data ➡️ Actionable Next Steps.
+3. Use high-density, authoritative bullet points with **bold headers** for each takeaway.
+4. Provide comprehensive presenter speaker notes for every slide to guide delivery.
 
 REQUIREMENTS:
-1. Return ONLY valid JSON (no markdown fences, no explanatory text).
-2. The JSON must be an array of slide objects matching this exact structure:
+- Return ONLY a valid JSON array of slide objects (no markdown fences, no conversational text).
+- Structure each slide exactly as follows:
 [
   {
-    "title": "Clear, High-Impact Slide Title",
-    "subtitle": "Informative Subtitle",
-    "content": "Short contextual summary or overview paragraph (1-2 sentences).",
+    "title": "Clear, Compelling Slide Title",
+    "subtitle": "Insightful Subtitle",
+    "content": "A high-impact executive summary or explanatory paragraph (1-2 sentences).",
     "bullets": [
-      "**Key Takeaway 1:** Specific detail, metric, or supporting fact",
-      "**Key Takeaway 2:** Another impactful point with substance",
-      "**Key Takeaway 3:** Actionable insight or proof point"
+      "**Key Finding:** Specific detail, metric, or strategic insight",
+      "**Evidence / Mechanism:** Supporting data, proof point, or framework element",
+      "**Implication:** Why this matters for the audience"
     ],
     "layout": "title" | "content" | "two-column" | "chart",
-    "chartTitle": "Optional title for chart if layout is chart",
-    "notes": "Comprehensive speaker notes for the presenter explaining how to deliver this slide."
+    "chartTitle": "Title for chart if layout is chart",
+    "notes": "Detailed speaker notes explaining the context and talking points."
   }
 ]
 
-SLIDE STRUCTURE GUIDELINES:
-- Slide 1 MUST have layout: "title" (the main presentation title slide).
-- Use layout: "chart" or "two-column" for data-heavy or comparison slides.
-- Use layout: "content" for explanatory and narrative slides.
-- Final slide should be a powerful conclusion, next steps, or Call to Action.
-- Make the bullet points punchy, data-driven, and use **bold headers** for emphasis.
-- Tailor the vocabulary strictly to the requested audience and tone.`;
+- Slide 1 MUST have layout: "title".
+- Use layout: "chart" or "two-column" where appropriate for visual variety.`;
 
-  const result = await model.generateContent(systemPrompt);
-  const responseText = result.response.text().trim();
+  let responseText;
+  try {
+    const result = await model.generateContent(systemPrompt);
+    responseText = result.response.text().trim();
+  } catch (err) {
+    // If gemini-1.5-pro has a quota/rate limit issue, fall back to gemini-1.5-flash
+    console.warn(`Falling back to gemini-1.5-flash due to: ${err.message}`);
+    const flashModel = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await flashModel.generateContent(systemPrompt);
+    responseText = result.response.text().trim();
+  }
 
   // Extract JSON array from response
   const jsonMatch = responseText.match(/\[[\s\S]*\]/);
@@ -101,8 +139,8 @@ function extractKeywords(prompt) {
   return words.length > 0 ? words : ['innovation', 'strategy', 'growth'];
 }
 
-function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience) {
-  const keywords = extractKeywords(prompt);
+function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience, notesText = '') {
+  const keywords = extractKeywords(prompt + (notesText ? ' ' + notesText : ''));
   const mainSubject = keywords.slice(0, 4).map(capitalize).join(' ') || 'Strategic Overview';
   const k1 = keywords[0] || 'core initiatives';
   const k2 = keywords[1] || 'market transformation';
@@ -226,21 +264,35 @@ export async function generateSlides({
   tone = 'Professional',
   presentationType = 'Pitch Deck',
   audience = 'General',
+  purpose = 'Inform',
+  language = 'English (US)',
+  referenceUrl = '',
+  notesText = '',
 } = {}) {
   const gemini = getGeminiClient();
 
   if (gemini) {
     try {
-      console.log(`🤖 Generating presentation with Google Gemini AI for prompt: "${prompt}"`);
-      return await generateWithGemini(gemini, { prompt, slideCount, tone, presentationType, audience });
+      console.log(`🤖 Generating presentation with Google Gemini 1.5 Pro for prompt: "${prompt}"`);
+      return await generateWithGemini(gemini, {
+        prompt,
+        slideCount,
+        tone,
+        presentationType,
+        audience,
+        purpose,
+        language,
+        referenceUrl,
+        notesText,
+      });
     } catch (err) {
-      console.error('⚠️  Gemini generation failed, falling back to smart engine:', err.message);
+      console.error('⚠️ Gemini generation failed, falling back to smart engine:', err.message);
     }
   }
 
   // Smart fallback
   console.log(`⚡ Using smart contextual engine for prompt: "${prompt}"`);
-  return buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience);
+  return buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience, notesText);
 }
 
 export async function enhanceSlide(slide, instruction = '') {
@@ -248,7 +300,7 @@ export async function enhanceSlide(slide, instruction = '') {
 
   if (gemini) {
     try {
-      const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = gemini.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-1.5-pro' });
       const prompt = `You are an expert slide editor. Enhance this presentation slide based on this instruction: "${instruction}".
 
 Original Slide:

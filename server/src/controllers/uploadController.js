@@ -35,14 +35,17 @@ export async function uploadFile(req, res, next) {
     }
 
     // In production: upload req.file.buffer to cloud storage
-    // For now, return a generated fileId (the buffer is in memory)
-    const fileId = uuidv4();
+    let textContent = '';
+    if (req.file.mimetype === 'text/plain') {
+      textContent = req.file.buffer.toString('utf-8').slice(0, 50000); // Up to 50KB text
+    }
 
     res.json({
       fileId,
       originalName: req.file.originalname,
       size: req.file.size,
       mimeType: req.file.mimetype,
+      text: textContent,
       message: 'File uploaded successfully',
     });
   } catch (err) {

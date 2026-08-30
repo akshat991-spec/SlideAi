@@ -94,15 +94,20 @@ export async function create(req, res, next) {
       colorTheme = 'indigo',
       referenceUrl,
       fileIds = [],
+      notesText = '',
     } = req.body;
 
-    // Generate slides via AI service
+    // Generate slides via AI service (Gemini 1.5 Pro / NotebookLM engine)
     const generatedSlides = await generateSlides({
       prompt,
       slideCount: Number(slideCount),
       tone,
       presentationType,
       audience,
+      purpose,
+      language,
+      referenceUrl,
+      notesText,
     });
 
     const presentation = await Presentation.create({

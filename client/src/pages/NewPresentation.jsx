@@ -80,11 +80,15 @@ export default function NewPresentation() {
     setGenerating(true);
 
     try {
-      // Upload files first if any
+      // Upload files first if any and gather text
       const fileIds = [];
+      let combinedNotes = '';
       for (const f of files) {
         const res = await uploadService.upload(f);
         fileIds.push(res.data.fileId);
+        if (res.data.text) {
+          combinedNotes += `\n--- Document: ${f.name} ---\n${res.data.text}\n`;
+        }
       }
 
       const presRes = await presentationService.create({
@@ -97,6 +101,7 @@ export default function NewPresentation() {
         colorTheme,
         referenceUrl: referenceUrl.trim() || undefined,
         fileIds,
+        notesText: combinedNotes.trim() || undefined,
       });
 
       showSuccess('Generating your presentation…');

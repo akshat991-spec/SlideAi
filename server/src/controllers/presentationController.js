@@ -1,5 +1,6 @@
 import Presentation from '../models/Presentation.js';
 import { generateSlides, enhanceSlide } from '../services/aiService.js';
+import { generatePptxBuffer } from '../generators/pptxGenerator.js';
 
 // ── List presentations ─────────────────────────────────────────────
 
@@ -461,7 +462,13 @@ export async function exportPptx(req, res, next) {
 
     if (!pres) return res.status(404).json({ message: 'Presentation not found' });
 
-    res.status(501).json({ message: 'PPTX export coming soon. PDF export is available.' });
+    const buffer = await generatePptxBuffer(pres);
+    const sanitizedTitle = (pres.title || 'Presentation').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.pptx"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

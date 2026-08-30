@@ -3,8 +3,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 /**
  * SlideAI Intelligent Generation Service.
  *
- * Powered by Google Gemini 1.5 Pro (the flagship model behind NotebookLM)
- * with NotebookLM-style multi-source document grounding and smart fallback.
+ * Implements the Presentation Architect Master Prompt framework
+ * with Google Gemini AI and NotebookLM-style multi-source grounding.
  */
 
 function getGeminiClient() {
@@ -13,107 +13,170 @@ function getGeminiClient() {
   return new GoogleGenerativeAI(apiKey);
 }
 
-// ── Real Gemini 1.5 Pro AI Generation (NotebookLM-Style Grounding) ──
+// ── Master Presentation Architect Prompt Builder ──────────────────
 
-async function generateWithGemini(gemini, {
-  prompt,
-  slideCount = 8,
+function buildMasterSystemPrompt({
+  prompt = '',
+  slideCount = 0,
   tone = 'Professional',
   presentationType = 'Pitch Deck',
   audience = 'General',
   purpose = 'Inform',
   language = 'English (US)',
+  visualStyle = 'Minimal',
   referenceUrl = '',
   notesText = '',
 }) {
-  const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-pro';
-  
-  let model;
-  try {
-    model = gemini.getGenerativeModel({ model: modelName });
-  } catch {
-    model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
-  }
+  const generationMode = slideCount > 0
+    ? `${slideCount} Slides (Strict Count)`
+    : 'Auto (Determine appropriate slide count based on topic complexity)';
 
-  const count = slideCount > 0 ? slideCount : 8;
-
-  // Grounding block (NotebookLM mode)
-  let groundingContext = '';
+  let fullUserPrompt = prompt.trim();
   if (notesText && notesText.trim()) {
-    groundingContext += `\n\n--- SOURCE MATERIAL / NOTES (GROUNDING CONTEXT) ---\n${notesText.slice(0, 20000)}\n----------------------------------------------------\n`;
+    fullUserPrompt += `\n\n[SOURCE DOCUMENTS & RESEARCH NOTES]:\n${notesText.trim().slice(0, 25000)}`;
   }
   if (referenceUrl && referenceUrl.trim()) {
-    groundingContext += `\nReference Source URL: ${referenceUrl.trim()}\n`;
+    fullUserPrompt += `\n\n[REFERENCE SOURCE URL]: ${referenceUrl.trim()}`;
   }
 
-  const systemPrompt = `You are an elite presentation designer and McKinsey/TED-level slide creator with the deep analytical synthesis of Google NotebookLM.
-Generate a cohesive, authoritative, and deeply insightful ${count}-slide presentation deck based on the request below.
+  return `You are an expert presentation architect, visual designer, and business storytelling specialist.
 
-Topic / Prompt: "${prompt}"
+Your task is to create a complete, professional, presentation-ready PowerPoint deck based on the user's presentation request and configuration.
+
+## PRESENTATION CONFIGURATION
+Generation Mode: ${generationMode}
 Presentation Type: ${presentationType}
+Tone / Style: ${visualStyle} (${tone})
 Target Audience: ${audience}
-Primary Purpose: ${purpose}
-Tone: ${tone}
+Primary Objective: ${purpose}
 Language: ${language}
-Number of Slides: ${count}
-${groundingContext}
-INSTRUCTIONS FOR NOTEBOOKLM-STYLE SYNTHESIS:
-1. If Source Material/Notes are provided, ground the content strictly in those source insights, data points, and concepts.
-2. Structure the narrative with clear progression: Introduction/Hook ➡️ Core Thesis ➡️ Key Findings & Evidence ➡️ Strategic Framework ➡️ Quantitative Analysis / Visual Data ➡️ Actionable Next Steps.
-3. Use high-density, authoritative bullet points with **bold headers** for each takeaway.
-4. Provide comprehensive presenter speaker notes for every slide to guide delivery.
 
-REQUIREMENTS:
-- Return ONLY a valid JSON array of slide objects (no markdown fences, no conversational text).
-- Structure each slide exactly as follows:
+## USER'S PRESENTATION REQUEST
+${fullUserPrompt}
+
+---
+
+## YOUR OBJECTIVE
+Transform the user's request into a polished, logically structured, visually compelling presentation.
+
+Do not simply convert the user's text into slides. First understand the underlying objective, audience, topic, and intended outcome, then design the presentation around a strong narrative.
+
+If Generation Mode is "Auto", determine an appropriate slide count (typically 6 to 10 slides) based on the complexity of the topic.
+
+For a pitch deck, prioritize:
+1. Problem
+2. Existing gap / opportunity
+3. Solution
+4. Product or service
+5. How it works
+6. Target audience / market
+7. Business model
+8. Competitive advantage
+9. Traction / validation
+10. Growth strategy
+11. Team
+12. Financial or future outlook
+13. Funding / call to action
+
+Only include sections that are relevant to the user's specific request. Do not add unnecessary slides simply to reach a target number.
+
+---
+
+## CONTENT RULES
+* Create a clear narrative from beginning to end.
+* Every slide must have one primary message.
+* Use concise, presentation-friendly language.
+* Avoid large paragraphs and unnecessary text.
+* Convert complex information into bullets, diagrams, tables, timelines, charts, or visual frameworks where appropriate.
+* Do not fabricate facts, statistics, financial figures, customer numbers, testimonials, research, or citations.
+* If required information is missing, use clearly marked placeholders such as [Insert Market Size] rather than inventing information.
+* Maintain consistency in terminology throughout the presentation.
+* Use strong, meaningful slide titles rather than generic titles such as "Introduction", "Overview", or "Details".
+* Ensure the presentation can be understood even when presented without the user explaining every slide.
+
+---
+
+## VISUAL DESIGN & SLIDE PRINCIPLES
+Follow the selected style: ${visualStyle} (${tone})
+* Use a sophisticated, modern visual language with strong visual hierarchy.
+* Use generous whitespace and keep layouts clean and uncluttered.
+* Available layouts:
+  - "title": Hero title slide (Slide 1 MUST be "title")
+  - "content": Standard content with key takeaways
+  - "two-column": Comparison, problem vs solution, or two-pillar breakdown
+  - "chart": Quantitative metrics, growth trends, or KPI visualization
+* Use visual variety—do not use the same layout repeatedly.
+
+---
+
+## OUTPUT FORMAT SPECIFICATION (CRITICAL)
+Return ONLY a valid, parseable JSON array of slide objects. Do not include markdown code fences (\`\`\`json), explanations, or preamble.
+
+Structure each slide object exactly as follows:
 [
   {
-    "title": "Clear, Compelling Slide Title",
-    "subtitle": "Insightful Subtitle",
-    "content": "A high-impact executive summary or explanatory paragraph (1-2 sentences).",
+    "title": "Strong, Meaningful Slide Title",
+    "subtitle": "Informative Subtitle Communicating Core Context",
+    "content": "Concise 1-2 sentence executive overview or summary.",
     "bullets": [
-      "**Key Finding:** Specific detail, metric, or strategic insight",
-      "**Evidence / Mechanism:** Supporting data, proof point, or framework element",
-      "**Implication:** Why this matters for the audience"
+      "**Primary Takeaway:** Specific data point, insight, or evidence",
+      "**Supporting Driver:** Mechanism, proof point, or strategic nuance",
+      "**Actionable Impact:** Concrete implication or outcome"
     ],
     "layout": "title" | "content" | "two-column" | "chart",
-    "chartTitle": "Title for chart if layout is chart",
-    "notes": "Detailed speaker notes explaining the context and talking points."
+    "chartTitle": "Optional title if layout is chart",
+    "notes": "Comprehensive presenter speaker notes explaining context, talking points, and delivery tips."
   }
-]
+]`;
+}
 
-- Slide 1 MUST have layout: "title".
-- Use layout: "chart" or "two-column" where appropriate for visual variety.`;
+// ── Real Gemini AI Generation ──────────────────────────────────────
 
-  let responseText;
-  try {
-    const result = await model.generateContent(systemPrompt);
-    responseText = result.response.text().trim();
-  } catch (err) {
-    // If gemini-1.5-pro has a quota/rate limit issue, fall back to gemini-1.5-flash
-    console.warn(`Falling back to gemini-1.5-flash due to: ${err.message}`);
-    const flashModel = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await flashModel.generateContent(systemPrompt);
-    responseText = result.response.text().trim();
+async function generateWithGemini(gemini, config) {
+  // Try newer models first with fallback
+  const modelsToTry = [
+    process.env.GEMINI_MODEL,
+    'gemini-3.6-flash',
+    'gemini-3.7-flash',
+    'gemini-3.1-pro-preview',
+    'gemini-1.5-pro',
+    'gemini-1.5-flash',
+  ].filter(Boolean);
+
+  const systemPrompt = buildMasterSystemPrompt(config);
+
+  let lastError = null;
+
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`🤖 Attempting presentation generation with ${modelName}...`);
+      const model = gemini.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(systemPrompt);
+      const responseText = result.response.text().trim();
+
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        throw new Error(`Model ${modelName} did not return a valid JSON array`);
+      }
+
+      const rawSlides = JSON.parse(jsonMatch[0]);
+      return rawSlides.map((s, i) => ({
+        title: s.title || `Slide ${i + 1}`,
+        subtitle: s.subtitle || '',
+        content: s.content || '',
+        bullets: Array.isArray(s.bullets) ? s.bullets : [],
+        layout: s.layout || (i === 0 ? 'title' : 'content'),
+        chartTitle: s.chartTitle || '',
+        notes: s.notes || '',
+        order: i,
+      }));
+    } catch (err) {
+      console.warn(`⚠️ Model ${modelName} failed: ${err.message}. Trying next model...`);
+      lastError = err;
+    }
   }
 
-  // Extract JSON array from response
-  const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
-    throw new Error('Gemini did not return a valid JSON array');
-  }
-
-  const rawSlides = JSON.parse(jsonMatch[0]);
-  return rawSlides.map((s, i) => ({
-    title: s.title || `Slide ${i + 1}`,
-    subtitle: s.subtitle || '',
-    content: s.content || '',
-    bullets: Array.isArray(s.bullets) ? s.bullets : [],
-    layout: s.layout || (i === 0 ? 'title' : 'content'),
-    chartTitle: s.chartTitle || '',
-    notes: s.notes || '',
-    order: i,
-  }));
+  throw lastError || new Error('All Gemini models failed');
 }
 
 // ── Smart Contextual Fallback Engine ───────────────────────────────
@@ -258,39 +321,26 @@ function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, au
 
 // ── Public API ─────────────────────────────────────────────────────
 
-export async function generateSlides({
-  prompt = '',
-  slideCount = 0,
-  tone = 'Professional',
-  presentationType = 'Pitch Deck',
-  audience = 'General',
-  purpose = 'Inform',
-  language = 'English (US)',
-  referenceUrl = '',
-  notesText = '',
-} = {}) {
+export async function generateSlides(config = {}) {
   const gemini = getGeminiClient();
 
   if (gemini) {
     try {
-      console.log(`🤖 Generating presentation with Google Gemini 1.5 Pro for prompt: "${prompt}"`);
-      return await generateWithGemini(gemini, {
-        prompt,
-        slideCount,
-        tone,
-        presentationType,
-        audience,
-        purpose,
-        language,
-        referenceUrl,
-        notesText,
-      });
+      return await generateWithGemini(gemini, config);
     } catch (err) {
-      console.error('⚠️ Gemini generation failed, falling back to smart engine:', err.message);
+      console.error('⚠️  Gemini generation failed, falling back to smart engine:', err.message);
     }
   }
 
-  // Smart fallback
+  const {
+    prompt = '',
+    slideCount = 0,
+    tone = 'Professional',
+    presentationType = 'Pitch Deck',
+    audience = 'General',
+    notesText = '',
+  } = config;
+
   console.log(`⚡ Using smart contextual engine for prompt: "${prompt}"`);
   return buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience, notesText);
 }
@@ -300,8 +350,8 @@ export async function enhanceSlide(slide, instruction = '') {
 
   if (gemini) {
     try {
-      const model = gemini.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-1.5-pro' });
-      const prompt = `You are an expert slide editor. Enhance this presentation slide based on this instruction: "${instruction}".
+      const model = gemini.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-3.6-flash' });
+      const prompt = `You are an expert slide editor and visual presentation architect. Enhance this presentation slide based on this instruction: "${instruction}".
 
 Original Slide:
 Title: ${slide.title}

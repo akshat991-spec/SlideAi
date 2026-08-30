@@ -39,6 +39,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (credentials) => {
     dispatch({ type: 'LOADING' });
     const res = await authService.login(credentials);
+    if (res.data.token) localStorage.setItem('token', res.data.token);
     dispatch({ type: 'SUCCESS', payload: res.data.user });
     return res.data;
   }, []);
@@ -46,11 +47,13 @@ export function AuthProvider({ children }) {
   const register = useCallback(async (data) => {
     dispatch({ type: 'LOADING' });
     const res = await authService.register(data);
+    if (res.data.token) localStorage.setItem('token', res.data.token);
     dispatch({ type: 'SUCCESS', payload: res.data.user });
     return res.data;
   }, []);
 
   const logout = useCallback(async () => {
+    localStorage.removeItem('token');
     await authService.logout().catch(() => {});
     dispatch({ type: 'LOGOUT' });
   }, []);

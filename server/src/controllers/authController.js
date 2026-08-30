@@ -55,7 +55,7 @@ export async function register(req, res, next) {
     const token = signToken(user._id);
     setTokenCookie(res, token);
 
-    res.status(201).json({ message: 'Account created', user });
+    res.status(201).json({ message: 'Account created', user, token });
   } catch (err) {
     next(err);
   }
@@ -79,7 +79,7 @@ export async function login(req, res, next) {
 
     // Strip password from response
     const userObj = user.toJSON();
-    res.json({ message: 'Logged in', user: userObj });
+    res.json({ message: 'Logged in', user: userObj, token });
   } catch (err) {
     next(err);
   }

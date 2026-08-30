@@ -43,6 +43,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ── Ensure DB Connection for Serverless ───────────────────────────
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') return next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    return res.status(503).json({
+      message: 'Database connection failed. Please check MONGODB_URI configuration.',
+      error: err.message,
+    });
+  }
+});
+
 // ── API Routes ────────────────────────────────────────────────────
 app.use('/api/auth',          authRoutes);
 app.use('/api/presentations', presentationRoutes);

@@ -129,10 +129,10 @@ async function generateWithGemini(gemini, config) {
   const modelsToTry = [
     process.env.GEMINI_MODEL,
     'gemini-3.6-flash',
+    'gemini-1.5-flash',
     'gemini-3.7-flash',
     'gemini-3.1-pro-preview',
     'gemini-1.5-pro',
-    'gemini-1.5-flash',
   ].filter(Boolean);
 
   const systemPrompt = buildMasterSystemPrompt(config);

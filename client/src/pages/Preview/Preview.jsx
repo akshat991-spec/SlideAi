@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, X, Layers, Maximize2, Minimize2, TrendingUp, BarChart3, Clock, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import {
+  ArrowLeft, ChevronLeft, ChevronRight, X, Layers, Maximize2, Minimize2,
+  TrendingUp, BarChart3, Clock, CheckCircle2, Image as ImageIcon, ArrowRight, Zap
+} from 'lucide-react';
 import { presentationService } from '../../services/presentationService.js';
 import { PageLoader } from '../../components/shared/LoadingSpinner.jsx';
 
@@ -56,6 +59,14 @@ function SlideView({ slide, colors }) {
 
   const maxVal = Math.max(...chartValues, 100);
 
+  const infographicItems = Array.isArray(slide.infographicData) && slide.infographicData.length > 0
+    ? slide.infographicData
+    : [
+        { step: 1, title: 'Intelligent Ingestion', description: 'Real-time telemetry and edge data synthesis.', value: 'Pillar 01' },
+        { step: 2, title: 'Adaptive Core', description: 'Autonomous optimization with continuous feedback.', value: 'Pillar 02' },
+        { step: 3, title: 'Enterprise Scaling', description: 'Zero-downtime distributed deployment architecture.', value: 'Pillar 03' },
+      ];
+
   // 1. Hero Title Slide
   if (layout === 'title') {
     return (
@@ -93,7 +104,64 @@ function SlideView({ slide, colors }) {
     );
   }
 
-  // 2. Image-Right
+  // 2. Infographic Slide
+  if (layout === 'infographic') {
+    const isProcess = slide.infographicType === 'process';
+
+    return (
+      <div className="w-full h-full flex flex-col p-14 relative overflow-hidden" style={{ background: colors.bg }}>
+        <div className="absolute top-0 left-0 right-0 h-2" style={{ background: colors.accent }} />
+
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded text-white" style={{ background: colors.accent }}>
+              INFOGRAPHIC
+            </span>
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight" style={{ color: colors.text }}>{slide.title}</h2>
+          {slide.subtitle && <p className="text-sm font-medium mt-1" style={{ color: colors.subtitle }}>{slide.subtitle}</p>}
+        </div>
+
+        {slide.content && (
+          <div className="bg-white/90 rounded-2xl p-4 border border-gray-200 shadow-xs text-sm text-gray-700 mb-4 leading-relaxed">
+            {slide.content}
+          </div>
+        )}
+
+        <div className={`grid gap-6 my-auto ${infographicItems.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          {infographicItems.map((item, idx) => (
+            <div
+              key={idx}
+              className="bg-white rounded-3xl p-6 border border-gray-200 shadow-md flex flex-col justify-between relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: colors.accent }} />
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
+                    {item.value || `0${idx + 1}`}
+                  </span>
+                  {isProcess && idx < infographicItems.length - 1 && (
+                    <ArrowRight className="w-4 h-4 text-gray-300" />
+                  )}
+                  {!isProcess && (
+                    <Zap className="w-4 h-4" style={{ color: colors.accent }} />
+                  )}
+                </div>
+                <h4 className="text-base font-bold text-gray-900 mb-2 leading-snug">{item.title}</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">{item.description}</p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-1.5 text-xs font-semibold" style={{ color: colors.accent }}>
+                <CheckCircle2 className="w-3.5 h-3.5" /> Core Dimension
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Image-Right
   if (layout === 'image-right') {
     return (
       <div className="w-full h-full flex flex-col p-14 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -133,7 +201,7 @@ function SlideView({ slide, colors }) {
     );
   }
 
-  // 3. Image-Left
+  // 4. Image-Left
   if (layout === 'image-left') {
     return (
       <div className="w-full h-full flex flex-col p-14 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -173,7 +241,7 @@ function SlideView({ slide, colors }) {
     );
   }
 
-  // 4. Stats / KPI Cards
+  // 5. Stats / KPI Cards
   if (layout === 'stats') {
     return (
       <div className="w-full h-full flex flex-col p-14 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -203,7 +271,7 @@ function SlideView({ slide, colors }) {
     );
   }
 
-  // 5. Chart / Analytics
+  // 6. Chart / Analytics
   if (layout === 'chart') {
     return (
       <div className="w-full h-full flex flex-col p-14 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -265,7 +333,7 @@ function SlideView({ slide, colors }) {
     );
   }
 
-  // 6. Default Content / Two-column
+  // 7. Default Content
   return (
     <div className="w-full h-full flex flex-col p-14 relative overflow-hidden" style={{ background: colors.bg }}>
       <div className="absolute top-0 left-0 right-0 h-2" style={{ background: colors.accent }} />

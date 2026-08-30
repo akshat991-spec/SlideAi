@@ -11,6 +11,18 @@ const metricSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// ── Infographic item sub-schema ───────────────────────────────────
+const infographicItemSchema = new mongoose.Schema(
+  {
+    step: { type: Number, default: 1 },
+    title: { type: String, default: '' },
+    description: { type: String, default: '' },
+    icon: { type: String, default: '' },
+    value: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 // ── Slide sub-schema ───────────────────────────────────────────────
 const slideSchema = new mongoose.Schema(
   {
@@ -21,12 +33,18 @@ const slideSchema = new mongoose.Schema(
     imageUrl: { type: String, default: '' },
     imagePrompt: { type: String, default: '' },
     metrics: { type: [metricSchema], default: [] },
+    infographicType: {
+      type: String,
+      enum: ['process', 'funnel', 'matrix', 'pillars', 'none'],
+      default: 'none',
+    },
+    infographicData: { type: [infographicItemSchema], default: [] },
     chartTitle: { type: String, default: '' },
     chartLabels: { type: [String], default: ['Q1', 'Q2', 'Q3', 'Q4'] },
     chartValues: { type: [Number], default: [35, 55, 78, 100] },
     layout: {
       type: String,
-      enum: ['title', 'content', 'two-column', 'image-left', 'image-right', 'chart', 'stats', 'timeline', 'blank'],
+      enum: ['title', 'content', 'two-column', 'image-left', 'image-right', 'chart', 'stats', 'timeline', 'infographic', 'blank'],
       default: 'content',
     },
     notes: { type: String, default: '' },

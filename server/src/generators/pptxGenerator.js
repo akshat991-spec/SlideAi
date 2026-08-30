@@ -8,7 +8,7 @@ const pptxgen = require('pptxgenjs');
  * Implements a modern executive design system with:
  * - 16:9 Widescreen slide dimensions
  * - Curated brand palettes (Indigo, Blue, Emerald, Slate)
- * - Structured component layouts: Hero Title, Image-Right/Left, Stats/KPIs, Charts, Timelines, Two-Column
+ * - Structured component layouts: Hero Title, Infographics (Pillars & Process), Image-Right/Left, Stats/KPIs, Charts, Timelines, Two-Column
  * - Speaker notes embedded natively in every PowerPoint slide
  */
 
@@ -150,7 +150,136 @@ function renderTitleSlide(pptx, slideData, palette, presentationMeta) {
 }
 
 /**
- * 2. Image-Right Slide
+ * 2. Infographic Slide (Pillars & Process)
+ */
+function renderInfographicSlide(pptx, slideData, palette, index, total) {
+  const slide = pptx.addSlide();
+  slide.background = { color: palette.bg };
+
+  slide.addShape(pptx.shapes.RECTANGLE, {
+    x: 0,
+    y: 0,
+    w: '100%',
+    h: 0.08,
+    fill: { color: palette.primary },
+  });
+
+  slide.addText(slideData.title || `Strategic Framework`, {
+    x: 0.8,
+    y: 0.5,
+    w: 11.7,
+    h: 0.7,
+    fontSize: 22,
+    bold: true,
+    color: palette.textDark,
+    fontFace: 'Arial',
+  });
+
+  if (slideData.subtitle) {
+    slide.addText(slideData.subtitle, {
+      x: 0.8,
+      y: 1.15,
+      w: 11.7,
+      h: 0.4,
+      fontSize: 12,
+      color: palette.accent,
+      fontFace: 'Arial',
+    });
+  }
+
+  const items = slideData.infographicData?.length
+    ? slideData.infographicData
+    : [
+        { step: 1, title: 'Intelligent Ingestion', description: 'Real-time telemetry and edge data synthesis.', value: 'Pillar 01' },
+        { step: 2, title: 'Adaptive Core', description: 'Autonomous optimization with continuous feedback.', value: 'Pillar 02' },
+        { step: 3, title: 'Enterprise Scaling', description: 'Zero-downtime distributed deployment architecture.', value: 'Pillar 03' },
+      ];
+
+  const count = Math.min(items.length, 4);
+  const totalW = 11.73;
+  const gap = 0.35;
+  const cardW = (totalW - gap * (count - 1)) / count;
+
+  items.slice(0, count).forEach((item, i) => {
+    const cardX = 0.8 + i * (cardW + gap);
+
+    // Main Card
+    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
+      x: cardX,
+      y: 1.8,
+      w: cardW,
+      h: 4.8,
+      rectRadius: 0.15,
+      fill: { color: palette.cardBg },
+      line: { color: palette.border, width: 1 },
+    });
+
+    // Top Accent Stripe
+    slide.addShape(pptx.shapes.RECTANGLE, {
+      x: cardX,
+      y: 1.8,
+      w: cardW,
+      h: 0.12,
+      fill: { color: palette.accent },
+    });
+
+    // Badge
+    slide.addText(item.value || `0${i + 1}`, {
+      x: cardX + 0.2,
+      y: 2.1,
+      w: 1.2,
+      h: 0.35,
+      fontSize: 10,
+      bold: true,
+      color: palette.primary,
+      fill: { color: 'F1F5F9' },
+      align: 'center',
+      fontFace: 'Arial',
+    });
+
+    // Title
+    slide.addText(item.title || `Dimension ${i + 1}`, {
+      x: cardX + 0.2,
+      y: 2.6,
+      w: cardW - 0.4,
+      h: 0.8,
+      fontSize: 13,
+      bold: true,
+      color: palette.textDark,
+      fontFace: 'Arial',
+      valign: 'top',
+    });
+
+    // Description
+    slide.addText(item.description || 'Core strategic component delivering measurable outcomes.', {
+      x: cardX + 0.2,
+      y: 3.4,
+      w: cardW - 0.4,
+      h: 2.8,
+      fontSize: 11,
+      color: palette.textMuted,
+      fontFace: 'Arial',
+      valign: 'top',
+    });
+  });
+
+  slide.addText(`${index + 1} / ${total}`, {
+    x: 11.5,
+    y: 7.0,
+    w: 1.2,
+    h: 0.3,
+    fontSize: 9,
+    color: '94A3B8',
+    align: 'right',
+    fontFace: 'Arial',
+  });
+
+  if (slideData.notes) slide.addNotes(slideData.notes);
+  return slide;
+}
+
+/**
+ * 3. Image-Right Slide
  */
 function renderImageRightSlide(pptx, slideData, palette, index, total) {
   const slide = pptx.addSlide();
@@ -187,7 +316,6 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
     });
   }
 
-  // Left side: Text & Bullets card
   const leftW = 6.8;
   slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
     x: 0.8,
@@ -216,7 +344,6 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
     }
   );
 
-  // Right side: Image or Visual Placeholder Card
   const rightX = 7.9;
   const rightW = 4.6;
   slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
@@ -240,7 +367,7 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
         rounding: true,
       });
     } catch {
-      // Fallback if image fetch fails
+      // Fallback
     }
   }
 
@@ -260,7 +387,7 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
 }
 
 /**
- * 3. Image-Left Slide
+ * 4. Image-Left Slide
  */
 function renderImageLeftSlide(pptx, slideData, palette, index, total) {
   const slide = pptx.addSlide();
@@ -297,7 +424,6 @@ function renderImageLeftSlide(pptx, slideData, palette, index, total) {
     });
   }
 
-  // Left side: Image Card
   const leftX = 0.8;
   const leftW = 4.6;
   slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
@@ -325,7 +451,6 @@ function renderImageLeftSlide(pptx, slideData, palette, index, total) {
     }
   }
 
-  // Right side: Text & Bullets card
   const rightX = 5.7;
   const rightW = 6.8;
   slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
@@ -371,7 +496,7 @@ function renderImageLeftSlide(pptx, slideData, palette, index, total) {
 }
 
 /**
- * 4. Stats / KPI Slide
+ * 5. Stats / KPI Slide
  */
 function renderStatsSlide(pptx, slideData, palette, index, total) {
   const slide = pptx.addSlide();
@@ -408,7 +533,6 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
     });
   }
 
-  // 3 Big KPI Stat Cards
   const metrics = slideData.metrics?.length ? slideData.metrics : [
     { label: 'Efficiency Gain', value: '+45%' },
     { label: 'Annual Overhead Saved', value: '$2.4M' },
@@ -461,7 +585,6 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
     });
   });
 
-  // Bullets on bottom
   const bullets = (slideData.bullets || []).filter((b) => b && b.trim());
   if (bullets.length > 0) {
     slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
@@ -500,7 +623,7 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
 }
 
 /**
- * 5. Chart Slide
+ * 6. Chart Slide
  */
 function renderChartSlide(pptx, slideData, palette, index, total) {
   const slide = pptx.addSlide();
@@ -601,7 +724,7 @@ function renderChartSlide(pptx, slideData, palette, index, total) {
 }
 
 /**
- * 6. Standard Content Slide
+ * 7. Standard Content Slide
  */
 function renderContentSlide(pptx, slideData, palette, index, total) {
   const slide = pptx.addSlide();
@@ -742,6 +865,9 @@ export async function generatePptxBuffer(presentation) {
     switch (layout) {
       case 'title':
         renderTitleSlide(pptx, slide, palette, presentation);
+        break;
+      case 'infographic':
+        renderInfographicSlide(pptx, slide, palette, index, total);
         break;
       case 'image-right':
         renderImageRightSlide(pptx, slide, palette, index, total);

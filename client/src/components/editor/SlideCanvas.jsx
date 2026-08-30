@@ -1,6 +1,9 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext.jsx';
-import { Minus, Plus, TrendingUp, Sparkles, CheckCircle2, Clock, BarChart3, Image as ImageIcon } from 'lucide-react';
+import {
+  Minus, Plus, TrendingUp, Sparkles, CheckCircle2, Clock, BarChart3,
+  Image as ImageIcon, ArrowRight, Layers, ShieldCheck, Cpu, Zap, Target
+} from 'lucide-react';
 
 const THEME_COLORS = {
   indigo: { bg: '#F8FAFC', cardBg: '#FFFFFF', accent: '#4338CA', text: '#0F172A', subtitle: '#6366F1', bullet: '#4F46E5', border: '#E2E8F0', statBg: '#EEF2FF' },
@@ -53,14 +56,19 @@ function SlideRenderer({ slide, colors }) {
 
   const maxVal = Math.max(...chartValues, 100);
 
+  const infographicItems = Array.isArray(slide.infographicData) && slide.infographicData.length > 0
+    ? slide.infographicData
+    : [
+        { step: 1, title: 'Intelligent Telemetry', description: 'Real-time telemetry and edge data synthesis.', value: 'Pillar 01' },
+        { step: 2, title: 'Adaptive Core', description: 'Autonomous optimization with continuous feedback.', value: 'Pillar 02' },
+        { step: 3, title: 'Enterprise Scaling', description: 'Zero-downtime distributed deployment architecture.', value: 'Pillar 03' },
+      ];
+
   // 1. Hero Title Slide
   if (layout === 'title') {
     return (
       <div className="w-full h-full flex flex-col justify-between p-12 relative overflow-hidden" style={{ background: colors.bg }}>
-        {/* Top accent bar */}
         <div className="absolute top-0 left-0 right-0 h-2" style={{ background: colors.accent }} />
-
-        {/* Decorative background circle */}
         <div className="absolute -right-20 -bottom-20 w-96 h-96 rounded-full opacity-10 blur-3xl pointer-events-none" style={{ background: colors.accent }} />
 
         <div className="flex items-center gap-2">
@@ -93,7 +101,67 @@ function SlideRenderer({ slide, colors }) {
     );
   }
 
-  // 2. Image-Right Slide (Photo + Takeaways)
+  // 2. Infographic Layout (Pillars / Process / Matrix)
+  if (layout === 'infographic') {
+    const isProcess = slide.infographicType === 'process';
+
+    return (
+      <div className="w-full h-full flex flex-col p-10 relative overflow-hidden" style={{ background: colors.bg }}>
+        <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: colors.accent }} />
+
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white" style={{ background: colors.accent }}>
+              INFOGRAPHIC
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight" style={{ color: colors.text }}>{slide.title}</h2>
+          {slide.subtitle && <p className="text-xs font-medium mt-0.5" style={{ color: colors.subtitle }}>{slide.subtitle}</p>}
+        </div>
+
+        {slide.content && (
+          <div className="bg-white/90 rounded-xl p-3 border border-gray-200/70 text-xs text-gray-700 mb-3 leading-relaxed">
+            {slide.content}
+          </div>
+        )}
+
+        {/* Infographic Grid */}
+        <div className={`grid gap-4 my-auto ${infographicItems.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          {infographicItems.map((item, idx) => (
+            <div
+              key={idx}
+              className="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs flex flex-col justify-between relative overflow-hidden group hover:border-primary-400 transition-all"
+            >
+              {/* Top Accent Strip */}
+              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: colors.accent }} />
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                    {item.value || `0${idx + 1}`}
+                  </span>
+                  {isProcess && idx < infographicItems.length - 1 && (
+                    <ArrowRight className="w-3.5 h-3.5 text-gray-300" />
+                  )}
+                  {!isProcess && (
+                    <Zap className="w-3.5 h-3.5" style={{ color: colors.accent }} />
+                  )}
+                </div>
+                <h4 className="text-sm font-bold text-gray-900 mb-1.5 leading-snug">{item.title}</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">{item.description}</p>
+              </div>
+
+              <div className="mt-3 pt-2 border-t border-gray-100 flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: colors.accent }}>
+                <CheckCircle2 className="w-3 h-3" /> Core Dimension
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Image-Right Slide (Photo + Takeaways)
   if (layout === 'image-right') {
     return (
       <div className="w-full h-full flex flex-col p-10 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -105,7 +173,6 @@ function SlideRenderer({ slide, colors }) {
         </div>
 
         <div className="grid grid-cols-12 gap-6 flex-1 items-center">
-          {/* Left: Text & Bullets */}
           <div className="col-span-7 space-y-3">
             {slide.content && (
               <div className="bg-white rounded-xl p-3.5 border border-gray-200/70 shadow-xs text-xs text-gray-700 leading-relaxed">
@@ -122,7 +189,6 @@ function SlideRenderer({ slide, colors }) {
             </div>
           </div>
 
-          {/* Right: High-Res Photo */}
           <div className="col-span-5 h-full max-h-[300px] rounded-2xl overflow-hidden shadow-md border border-gray-200 relative group bg-gray-100 flex items-center justify-center">
             {slide.imageUrl ? (
               <img
@@ -143,7 +209,7 @@ function SlideRenderer({ slide, colors }) {
     );
   }
 
-  // 3. Image-Left Slide
+  // 4. Image-Left Slide
   if (layout === 'image-left') {
     return (
       <div className="w-full h-full flex flex-col p-10 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -155,7 +221,6 @@ function SlideRenderer({ slide, colors }) {
         </div>
 
         <div className="grid grid-cols-12 gap-6 flex-1 items-center">
-          {/* Left: High-Res Photo */}
           <div className="col-span-5 h-full max-h-[300px] rounded-2xl overflow-hidden shadow-md border border-gray-200 relative group bg-gray-100 flex items-center justify-center">
             {slide.imageUrl ? (
               <img
@@ -172,7 +237,6 @@ function SlideRenderer({ slide, colors }) {
             )}
           </div>
 
-          {/* Right: Text & Bullets */}
           <div className="col-span-7 space-y-3">
             {slide.content && (
               <div className="bg-white rounded-xl p-3.5 border border-gray-200/70 shadow-xs text-xs text-gray-700 leading-relaxed">
@@ -193,7 +257,7 @@ function SlideRenderer({ slide, colors }) {
     );
   }
 
-  // 4. Stats / KPI Metric Cards Slide
+  // 5. Stats / KPI Metric Cards Slide
   if (layout === 'stats') {
     return (
       <div className="w-full h-full flex flex-col p-10 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -210,7 +274,6 @@ function SlideRenderer({ slide, colors }) {
           </div>
         )}
 
-        {/* Highlight KPI Cards */}
         <div className="grid grid-cols-3 gap-4 my-auto">
           {metrics.slice(0, 3).map((m, i) => (
             <div key={i} className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden">
@@ -237,7 +300,7 @@ function SlideRenderer({ slide, colors }) {
     );
   }
 
-  // 5. Chart / Analytics Slide
+  // 6. Chart / Analytics Slide
   if (layout === 'chart') {
     return (
       <div className="w-full h-full flex flex-col p-10 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -249,7 +312,6 @@ function SlideRenderer({ slide, colors }) {
         </div>
 
         <div className="grid grid-cols-12 gap-6 flex-1 items-center">
-          {/* Left Insights */}
           <div className="col-span-6 space-y-3">
             {slide.content && (
               <div className="bg-white rounded-xl p-3.5 border border-gray-200/70 shadow-xs text-xs text-gray-700 leading-relaxed">
@@ -266,7 +328,6 @@ function SlideRenderer({ slide, colors }) {
             </div>
           </div>
 
-          {/* Right: Bar Chart Visualization */}
           <div className="col-span-6 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm flex flex-col justify-between h-[280px]">
             <div className="flex items-center justify-between border-b border-gray-100 pb-2">
               <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
@@ -278,7 +339,6 @@ function SlideRenderer({ slide, colors }) {
               </span>
             </div>
 
-            {/* Bars */}
             <div className="flex items-end justify-around gap-4 h-36 pt-4 pb-2">
               {chartLabels.map((lbl, i) => {
                 const val = chartValues[i] || 50;
@@ -305,7 +365,7 @@ function SlideRenderer({ slide, colors }) {
     );
   }
 
-  // 6. Timeline / Process Slide
+  // 7. Timeline / Process Slide
   if (layout === 'timeline') {
     return (
       <div className="w-full h-full flex flex-col p-10 relative overflow-hidden" style={{ background: colors.bg }}>
@@ -339,7 +399,7 @@ function SlideRenderer({ slide, colors }) {
     );
   }
 
-  // 7. Two-Column Slide
+  // 8. Two-Column Slide
   if (layout === 'two-column') {
     const midpoint = Math.ceil(bullets.length / 2);
     const leftCol = bullets.slice(0, midpoint);
@@ -379,7 +439,7 @@ function SlideRenderer({ slide, colors }) {
     );
   }
 
-  // 8. Default Executive Content Slide
+  // 9. Default Executive Content Slide
   return (
     <div className="w-full h-full flex flex-col p-10 relative overflow-hidden" style={{ background: colors.bg }}>
       <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: colors.accent }} />

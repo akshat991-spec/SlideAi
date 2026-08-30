@@ -6,8 +6,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
  * Supports:
  * - Real Google Gemini 1.5 Pro / 3.6 Flash
  * - Full Master Presentation Architect Prompt
- * - High-Resolution Visual Layouts (image-left, image-right, stats/KPIs, charts, timelines)
+ * - High-Resolution Visual Layouts (image-left, image-right, stats/KPIs, charts, timelines, infographics)
  * - Dynamic Photo & Image Generation for Visual Slides
+ * - Process Chevrons, Architecture Pillars, Funnel, and 4-Quadrant Infographics
  */
 
 function getGeminiClient() {
@@ -19,7 +20,6 @@ function getGeminiClient() {
 // Generate topic-relevant high-resolution image URL
 function generateImageUrl(keyword = 'business technology strategy', index = 0) {
   const cleanKeyword = encodeURIComponent(keyword.trim() || 'modern technology');
-  // High-performance direct Pollinations AI image endpoint with high resolution
   return `https://image.pollinations.ai/prompt/${cleanKeyword},professional,photorealistic,clean,cinematic,high quality,4k?width=1200&height=800&nologo=true&seed=${index + 42}`;
 }
 
@@ -59,7 +59,7 @@ Presentation Type: ${presentationType}
 Tone / Style: ${visualStyle} (${tone})
 Target Audience: ${audience}
 Primary Objective: ${purpose}
-Language: ${language}
+Language: ${language} (CRITICAL: Generate ALL slide titles, subtitles, content, bullet points, infographic labels, metrics, and presenter speaker notes ENTIRELY in ${language}!)
 
 ## USER'S PRESENTATION REQUEST
 ${fullUserPrompt}
@@ -68,23 +68,25 @@ ${fullUserPrompt}
 
 ## YOUR OBJECTIVE & NARRATIVE DESIGN
 Transform the user's request into an engaging, executive-level presentation.
-Design with diverse visual layouts:
+Design with diverse visual layouts & infographics:
 - Slide 1: "title" (Hero cover slide)
-- Slide 2: "image-right" or "two-column" (Problem / Context with relevant visual)
-- Slide 3: "content" or "image-left" (Core Solution / Breakthrough)
+- Slide 2: "image-right" or "two-column" (Problem / Context with relevant photography)
+- Slide 3: "infographic" (Architecture Pillars or Process Workflow)
 - Slide 4: "chart" or "stats" (Quantitative Impact, KPIs, or Growth Trends)
 - Slide 5: "timeline" or "two-column" (Roadmap, Phased Milestones, or Comparison)
-- Slide 6+: "content" or "image-right" (Strategic Advantage, Call to Action, Conclusion)
+- Slide 6+: "image-left" or "content" (Strategic Advantage, Call to Action, Conclusion)
 
 ---
 
-## CONTENT & VISUAL RULES
+## CONTENT, VISUAL & INFOGRAPHIC RULES
 * Every slide must have a distinct purpose and strong, informative title.
 * Use concise bullet points with **bold headers** (e.g. "**Operational Bottleneck:** ...").
 * For "image-left" or "image-right" slides, provide a descriptive "imagePrompt" (e.g. "photorealistic robotic surgery in clean modern hospital operating room").
+* For "infographic" slides:
+  - Set "infographicType": "pillars" | "process" | "funnel" | "matrix"
+  - Provide "infographicData": Array of 3 to 4 items with { "step": 1, "title": "Pillar Name", "description": "Crisp 1-sentence detail", "value": "e.g. 99.9% or Step 1" }
 * For "stats" slides, provide a "metrics" array with 2-3 high-impact numbers (e.g. [{"label": "Efficiency Gain", "value": "+45%"}, {"label": "Cost Savings", "value": "$2.4M"}]).
 * For "chart" slides, provide "chartTitle", "chartLabels", and "chartValues" (e.g. labels: ["Q1", "Q2", "Q3", "Q4"], values: [35, 55, 78, 100]).
-* For "timeline" slides, structure bullets as chronological phases.
 
 ---
 
@@ -99,10 +101,15 @@ Structure each slide object as follows:
     "content": "Concise 1-2 sentence executive overview.",
     "bullets": [
       "**Primary Takeaway:** Specific data point, insight, or evidence",
-      "**Supporting Driver:** Mechanism, proof point, or strategic nuance",
-      "**Actionable Impact:** Concrete implication or outcome"
+      "**Supporting Driver:** Mechanism, proof point, or strategic nuance"
     ],
-    "layout": "title" | "content" | "image-right" | "image-left" | "two-column" | "chart" | "stats" | "timeline",
+    "layout": "title" | "content" | "image-right" | "image-left" | "two-column" | "chart" | "stats" | "timeline" | "infographic",
+    "infographicType": "pillars" | "process" | "funnel" | "matrix" | "none",
+    "infographicData": [
+      { "step": 1, "title": "Smart Telemetry", "description": "Real-time edge telemetry with sub-millisecond sync.", "value": "01" },
+      { "step": 2, "title": "Autonomous Routing", "description": "Dynamic path optimization reducing latency.", "value": "02" },
+      { "step": 3, "title": "Zero-Trust Security", "description": "End-to-end hardware-level cryptographic isolation.", "value": "03" }
+    ],
     "imagePrompt": "Detailed visual description for generating a relevant photo",
     "chartTitle": "Optional title for chart",
     "chartLabels": ["Q1", "Q2", "Q3", "Q4"],
@@ -159,6 +166,14 @@ async function generateWithGemini(gemini, config) {
           layout,
           imageUrl,
           imagePrompt,
+          infographicType: s.infographicType || (layout === 'infographic' ? 'pillars' : 'none'),
+          infographicData: Array.isArray(s.infographicData) && s.infographicData.length > 0
+            ? s.infographicData
+            : [
+                { step: 1, title: 'Intelligent Ingestion', description: 'Real-time telemetry and data synthesis.', value: '01' },
+                { step: 2, title: 'Adaptive Core', description: 'Autonomous optimization with continuous feedback.', value: '02' },
+                { step: 3, title: 'Enterprise Scaling', description: 'Zero-downtime distributed deployment.', value: '03' },
+              ],
           chartTitle: s.chartTitle || '',
           chartLabels: Array.isArray(s.chartLabels) && s.chartLabels.length > 0 ? s.chartLabels : ['Q1', 'Q2', 'Q3', 'Q4'],
           chartValues: Array.isArray(s.chartValues) && s.chartValues.length > 0 ? s.chartValues : [35, 55, 78, 100],
@@ -237,18 +252,19 @@ function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, au
       notes: 'Emphasize the cost of inaction. Make the problem tangible to the audience.',
     },
     {
-      title: `Strategic Solution: ${mainSubject}`,
-      subtitle: 'A Modern, Scalable Architectural Framework',
-      content: `Our proposed approach delivers an integrated strategy tailored specifically for ${audience}.`,
-      bullets: [
-        `**Intelligent Automation:** Streamlining ${k1} workflows with modern technology`,
-        `**Real-Time Visibility:** Comprehensive reporting and telemetry for data-driven decisions`,
-        `**Scalable Infrastructure:** Designed to support high-throughput growth and seamless adoption`,
+      title: `Strategic Architecture Pillars`,
+      subtitle: `Core Functional Dimensions of ${mainSubject}`,
+      content: `Our proposed framework delivers an integrated, scalable model designed for high-velocity execution.`,
+      bullets: [],
+      layout: 'infographic',
+      infographicType: 'pillars',
+      infographicData: [
+        { step: 1, title: `Intelligent ${capitalize(k1)}`, description: `Automated workflows reducing manual friction by up to 60%.`, value: 'Pillar 01' },
+        { step: 2, title: `Real-Time ${capitalize(k2)}`, description: `Unified reporting telemetry with predictive risk stratification.`, value: 'Pillar 02' },
+        { step: 3, title: `Scalable ${capitalize(k3)}`, description: `Modular enterprise integration designed for zero-disruption rollout.`, value: 'Pillar 03' },
       ],
-      layout: 'image-left',
-      imageUrl: generateImageUrl(k2 + ' solution innovation modern', 2),
       order: 2,
-      notes: 'Walk through the core pillars of the solution and address potential concerns proactively.',
+      notes: 'Walk through each architectural pillar to demonstrate systematic execution.',
     },
     {
       title: 'Key Metrics & Projected Impact',

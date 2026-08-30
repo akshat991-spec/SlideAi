@@ -1,6 +1,16 @@
 import mongoose from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
+// ── Metric sub-schema (for stats/KPI slides) ───────────────────────
+const metricSchema = new mongoose.Schema(
+  {
+    label: { type: String, default: '' },
+    value: { type: String, default: '' },
+    change: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 // ── Slide sub-schema ───────────────────────────────────────────────
 const slideSchema = new mongoose.Schema(
   {
@@ -8,10 +18,15 @@ const slideSchema = new mongoose.Schema(
     subtitle: { type: String, default: '' },
     content: { type: String, default: '' },
     bullets: { type: [String], default: [] },
+    imageUrl: { type: String, default: '' },
     imagePrompt: { type: String, default: '' },
+    metrics: { type: [metricSchema], default: [] },
+    chartTitle: { type: String, default: '' },
+    chartLabels: { type: [String], default: ['Q1', 'Q2', 'Q3', 'Q4'] },
+    chartValues: { type: [Number], default: [35, 55, 78, 100] },
     layout: {
       type: String,
-      enum: ['title', 'content', 'two-column', 'image-left', 'image-right', 'blank', 'chart'],
+      enum: ['title', 'content', 'two-column', 'image-left', 'image-right', 'chart', 'stats', 'timeline', 'blank'],
       default: 'content',
     },
     notes: { type: String, default: '' },
@@ -43,38 +58,44 @@ const presentationSchema = new mongoose.Schema(
 
     // Generation metadata
     prompt: { type: String, default: '' },
+    tone: { type: String, default: 'Professional' },
+    language: { type: String, default: 'English (US)' },
+    presentationType: { type: String, default: 'Pitch Deck' },
     audience: { type: String, default: 'General' },
     purpose: { type: String, default: 'Inform' },
-    tone: { type: String, default: 'Professional' },
     visualStyle: { type: String, default: 'Minimal' },
-    presentationType: { type: String, default: 'Pitch Deck' },
-    language: { type: String, default: 'English (US)' },
+    generationMode: { type: String, default: 'Auto' },
+    referenceUrl: { type: String, default: '' },
 
-    // Theme
+    // Theme & Styling
     theme: {
       colorTheme: { type: String, default: 'indigo' },
-      fontFamily: { type: String, default: 'Inter' },
+      fontHeading: { type: String, default: 'Inter' },
+      fontBody: { type: String, default: 'Inter' },
     },
 
     // Sharing
-    shareId: { type: String, default: null, index: true, sparse: true },
     isShared: { type: Boolean, default: false },
+    shareId: { type: String, default: null, unique: true, sparse: true },
 
-    // Soft delete
+    // Organization
     isFavorite: { type: Boolean, default: false },
-    isDeleted: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-// ── Index for efficient queries ────────────────────────────────────
-presentationSchema.index({ owner: 1, isDeleted: 1, updatedAt: -1 });
-
-// ── Helpers ────────────────────────────────────────────────────────
+// Auto-generate shareId when sharing is enabled
 presentationSchema.methods.generateShareId = function () {
   this.shareId = uuidv4();
   this.isShared = true;
   return this.shareId;
 };
 
-export default mongoose.model('Presentation', presentationSchema);
+// Index for search queries
+presentationSchema.index({ owner: 1, isDeleted: 1, updatedAt: -1 });
+presentationSchema.index({ title: 'text', prompt: 'text' });
+
+const Presentation = mongoose.model('Presentation', presentationSchema);
+
+export default Presentation;

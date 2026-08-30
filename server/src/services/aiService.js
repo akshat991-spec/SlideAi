@@ -1,16 +1,26 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
- * SlideAI Intelligent Generation Service.
+ * SlideAI Presentation Architect Engine
  *
- * Implements the Presentation Architect Master Prompt framework
- * with Google Gemini AI and NotebookLM-style multi-source grounding.
+ * Supports:
+ * - Real Google Gemini 1.5 Pro / 3.6 Flash
+ * - Full Master Presentation Architect Prompt
+ * - High-Resolution Visual Layouts (image-left, image-right, stats/KPIs, charts, timelines)
+ * - Dynamic Photo & Image Generation for Visual Slides
  */
 
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) return null;
   return new GoogleGenerativeAI(apiKey);
+}
+
+// Generate topic-relevant high-resolution image URL
+function generateImageUrl(keyword = 'business technology strategy', index = 0) {
+  const cleanKeyword = encodeURIComponent(keyword.trim() || 'modern technology');
+  // High-performance direct Pollinations AI image endpoint with high resolution
+  return `https://image.pollinations.ai/prompt/${cleanKeyword},professional,photorealistic,clean,cinematic,high quality,4k?width=1200&height=800&nologo=true&seed=${index + 42}`;
 }
 
 // ── Master Presentation Architect Prompt Builder ──────────────────
@@ -23,13 +33,13 @@ function buildMasterSystemPrompt({
   audience = 'General',
   purpose = 'Inform',
   language = 'English (US)',
-  visualStyle = 'Minimal',
+  visualStyle = 'Modern',
   referenceUrl = '',
   notesText = '',
 }) {
   const generationMode = slideCount > 0
     ? `${slideCount} Slides (Strict Count)`
-    : 'Auto (Determine appropriate slide count based on topic complexity)';
+    : 'Auto (Determine appropriate slide count based on topic complexity, typically 6 to 8 slides)';
 
   let fullUserPrompt = prompt.trim();
   if (notesText && notesText.trim()) {
@@ -39,9 +49,9 @@ function buildMasterSystemPrompt({
     fullUserPrompt += `\n\n[REFERENCE SOURCE URL]: ${referenceUrl.trim()}`;
   }
 
-  return `You are an expert presentation architect, visual designer, and business storytelling specialist.
+  return `You are an elite presentation architect, visual designer, and business storytelling specialist.
 
-Your task is to create a complete, professional, presentation-ready PowerPoint deck based on the user's presentation request and configuration.
+Your task is to create a complete, professional, visually stunning presentation deck based on the request and configuration below.
 
 ## PRESENTATION CONFIGURATION
 Generation Mode: ${generationMode}
@@ -56,75 +66,51 @@ ${fullUserPrompt}
 
 ---
 
-## YOUR OBJECTIVE
-Transform the user's request into a polished, logically structured, visually compelling presentation.
-
-Do not simply convert the user's text into slides. First understand the underlying objective, audience, topic, and intended outcome, then design the presentation around a strong narrative.
-
-If Generation Mode is "Auto", determine an appropriate slide count (typically 6 to 10 slides) based on the complexity of the topic.
-
-For a pitch deck, prioritize:
-1. Problem
-2. Existing gap / opportunity
-3. Solution
-4. Product or service
-5. How it works
-6. Target audience / market
-7. Business model
-8. Competitive advantage
-9. Traction / validation
-10. Growth strategy
-11. Team
-12. Financial or future outlook
-13. Funding / call to action
-
-Only include sections that are relevant to the user's specific request. Do not add unnecessary slides simply to reach a target number.
+## YOUR OBJECTIVE & NARRATIVE DESIGN
+Transform the user's request into an engaging, executive-level presentation.
+Design with diverse visual layouts:
+- Slide 1: "title" (Hero cover slide)
+- Slide 2: "image-right" or "two-column" (Problem / Context with relevant visual)
+- Slide 3: "content" or "image-left" (Core Solution / Breakthrough)
+- Slide 4: "chart" or "stats" (Quantitative Impact, KPIs, or Growth Trends)
+- Slide 5: "timeline" or "two-column" (Roadmap, Phased Milestones, or Comparison)
+- Slide 6+: "content" or "image-right" (Strategic Advantage, Call to Action, Conclusion)
 
 ---
 
-## CONTENT RULES
-* Create a clear narrative from beginning to end.
-* Every slide must have one primary message.
-* Use concise, presentation-friendly language.
-* Avoid large paragraphs and unnecessary text.
-* Convert complex information into bullets, diagrams, tables, timelines, charts, or visual frameworks where appropriate.
-* Do not fabricate facts, statistics, financial figures, customer numbers, testimonials, research, or citations.
-* If required information is missing, use clearly marked placeholders such as [Insert Market Size] rather than inventing information.
-* Maintain consistency in terminology throughout the presentation.
-* Use strong, meaningful slide titles rather than generic titles such as "Introduction", "Overview", or "Details".
-* Ensure the presentation can be understood even when presented without the user explaining every slide.
-
----
-
-## VISUAL DESIGN & SLIDE PRINCIPLES
-Follow the selected style: ${visualStyle} (${tone})
-* Use a sophisticated, modern visual language with strong visual hierarchy.
-* Use generous whitespace and keep layouts clean and uncluttered.
-* Available layouts:
-  - "title": Hero title slide (Slide 1 MUST be "title")
-  - "content": Standard content with key takeaways
-  - "two-column": Comparison, problem vs solution, or two-pillar breakdown
-  - "chart": Quantitative metrics, growth trends, or KPI visualization
-* Use visual variety—do not use the same layout repeatedly.
+## CONTENT & VISUAL RULES
+* Every slide must have a distinct purpose and strong, informative title.
+* Use concise bullet points with **bold headers** (e.g. "**Operational Bottleneck:** ...").
+* For "image-left" or "image-right" slides, provide a descriptive "imagePrompt" (e.g. "photorealistic robotic surgery in clean modern hospital operating room").
+* For "stats" slides, provide a "metrics" array with 2-3 high-impact numbers (e.g. [{"label": "Efficiency Gain", "value": "+45%"}, {"label": "Cost Savings", "value": "$2.4M"}]).
+* For "chart" slides, provide "chartTitle", "chartLabels", and "chartValues" (e.g. labels: ["Q1", "Q2", "Q3", "Q4"], values: [35, 55, 78, 100]).
+* For "timeline" slides, structure bullets as chronological phases.
 
 ---
 
 ## OUTPUT FORMAT SPECIFICATION (CRITICAL)
 Return ONLY a valid, parseable JSON array of slide objects. Do not include markdown code fences (\`\`\`json), explanations, or preamble.
 
-Structure each slide object exactly as follows:
+Structure each slide object as follows:
 [
   {
     "title": "Strong, Meaningful Slide Title",
     "subtitle": "Informative Subtitle Communicating Core Context",
-    "content": "Concise 1-2 sentence executive overview or summary.",
+    "content": "Concise 1-2 sentence executive overview.",
     "bullets": [
       "**Primary Takeaway:** Specific data point, insight, or evidence",
       "**Supporting Driver:** Mechanism, proof point, or strategic nuance",
       "**Actionable Impact:** Concrete implication or outcome"
     ],
-    "layout": "title" | "content" | "two-column" | "chart",
-    "chartTitle": "Optional title if layout is chart",
+    "layout": "title" | "content" | "image-right" | "image-left" | "two-column" | "chart" | "stats" | "timeline",
+    "imagePrompt": "Detailed visual description for generating a relevant photo",
+    "chartTitle": "Optional title for chart",
+    "chartLabels": ["Q1", "Q2", "Q3", "Q4"],
+    "chartValues": [40, 65, 85, 110],
+    "metrics": [
+      { "label": "Performance Leap", "value": "10x" },
+      { "label": "Cost Reduction", "value": "45%" }
+    ],
     "notes": "Comprehensive presenter speaker notes explaining context, talking points, and delivery tips."
   }
 ]`;
@@ -133,7 +119,6 @@ Structure each slide object exactly as follows:
 // ── Real Gemini AI Generation ──────────────────────────────────────
 
 async function generateWithGemini(gemini, config) {
-  // Try newer models first with fallback
   const modelsToTry = [
     process.env.GEMINI_MODEL,
     'gemini-3.6-flash',
@@ -144,7 +129,6 @@ async function generateWithGemini(gemini, config) {
   ].filter(Boolean);
 
   const systemPrompt = buildMasterSystemPrompt(config);
-
   let lastError = null;
 
   for (const modelName of modelsToTry) {
@@ -160,16 +144,32 @@ async function generateWithGemini(gemini, config) {
       }
 
       const rawSlides = JSON.parse(jsonMatch[0]);
-      return rawSlides.map((s, i) => ({
-        title: s.title || `Slide ${i + 1}`,
-        subtitle: s.subtitle || '',
-        content: s.content || '',
-        bullets: Array.isArray(s.bullets) ? s.bullets : [],
-        layout: s.layout || (i === 0 ? 'title' : 'content'),
-        chartTitle: s.chartTitle || '',
-        notes: s.notes || '',
-        order: i,
-      }));
+      return rawSlides.map((s, i) => {
+        const layout = s.layout || (i === 0 ? 'title' : 'content');
+        const imagePrompt = s.imagePrompt || s.title || config.prompt;
+        const imageUrl = ['image-left', 'image-right', 'title'].includes(layout)
+          ? generateImageUrl(imagePrompt, i)
+          : '';
+
+        return {
+          title: s.title || `Slide ${i + 1}`,
+          subtitle: s.subtitle || '',
+          content: s.content || '',
+          bullets: Array.isArray(s.bullets) ? s.bullets : [],
+          layout,
+          imageUrl,
+          imagePrompt,
+          chartTitle: s.chartTitle || '',
+          chartLabels: Array.isArray(s.chartLabels) && s.chartLabels.length > 0 ? s.chartLabels : ['Q1', 'Q2', 'Q3', 'Q4'],
+          chartValues: Array.isArray(s.chartValues) && s.chartValues.length > 0 ? s.chartValues : [35, 55, 78, 100],
+          metrics: Array.isArray(s.metrics) && s.metrics.length > 0 ? s.metrics : [
+            { label: 'Projected Impact', value: '+45%' },
+            { label: 'Time Saved', value: '2.5x' }
+          ],
+          notes: s.notes || '',
+          order: i,
+        };
+      });
     } catch (err) {
       console.warn(`⚠️ Model ${modelName} failed: ${err.message}. Trying next model...`);
       lastError = err;
@@ -209,7 +209,7 @@ function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, au
   const k2 = keywords[1] || 'market transformation';
   const k3 = keywords[2] || 'operational excellence';
 
-  const count = slideCount > 0 ? slideCount : 8;
+  const count = slideCount > 0 ? slideCount : 6;
 
   const slides = [
     {
@@ -218,33 +218,22 @@ function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, au
       content: `A strategic presentation focused on ${prompt}. Designed to inform, align, and drive key decisions.`,
       bullets: [],
       layout: 'title',
+      imageUrl: generateImageUrl(mainSubject + ' banner header', 0),
       order: 0,
       notes: `Welcome everyone. Introduce the session on "${prompt}" and outline key expectations.`,
-    },
-    {
-      title: 'Executive Summary',
-      subtitle: 'The Strategic Context & Core Objectives',
-      content: `Addressing the rapid evolution of ${k1} requires proactive alignment across ${audience.toLowerCase()} stakeholders.`,
-      bullets: [
-        `**Key Opportunity:** Accelerate transformation by leveraging ${k1} and ${k2}`,
-        `**Expected Impact:** Achieve up to 45% efficiency gains and measurable strategic upside`,
-        `**Core Objective:** Establish actionable milestones and resource commitment for execution`,
-      ],
-      layout: 'content',
-      order: 1,
-      notes: 'Deliver a crisp 60-second summary before diving into deeper analysis.',
     },
     {
       title: `The Current Challenge in ${capitalize(k1)}`,
       subtitle: 'Understanding the Core Friction Points',
       content: `Legacy models for ${k1} are failing to keep pace with modern performance expectations and market velocity.`,
       bullets: [
-        `**Operational Bottlenecks:** 68% of industry practitioners report significant friction in ${k1}`,
+        `**Operational Bottlenecks:** 68% of practitioners report significant friction in ${k1}`,
         `**Resource Inefficiencies:** Fragmented processes increase cycle times by up to 2.5x`,
         `**Market Pressure:** Competitors adopting modern ${k2} frameworks are capturing market share`,
       ],
-      layout: 'two-column',
-      order: 2,
+      layout: 'image-right',
+      imageUrl: generateImageUrl(k1 + ' problem challenge technology', 1),
+      order: 1,
       notes: 'Emphasize the cost of inaction. Make the problem tangible to the audience.',
     },
     {
@@ -255,25 +244,43 @@ function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, au
         `**Intelligent Automation:** Streamlining ${k1} workflows with modern technology`,
         `**Real-Time Visibility:** Comprehensive reporting and telemetry for data-driven decisions`,
         `**Scalable Infrastructure:** Designed to support high-throughput growth and seamless adoption`,
-        `**Risk Mitigation:** Enterprise-grade governance and security compliance built-in`,
       ],
-      layout: 'content',
-      order: 3,
+      layout: 'image-left',
+      imageUrl: generateImageUrl(k2 + ' solution innovation modern', 2),
+      order: 2,
       notes: 'Walk through the core pillars of the solution and address potential concerns proactively.',
     },
     {
-      title: 'Key Metrics & Projected Growth',
-      subtitle: 'Quantifiable Business & Operational Impact',
+      title: 'Key Metrics & Projected Impact',
+      subtitle: 'Quantifiable Business & Operational Returns',
       content: `Projected trajectory based on full rollout of ${k1} and ${k2} initiatives.`,
       bullets: [
-        '**Year 1 Adoption:** +35% baseline performance improvement',
-        '**Efficiency Multiplier:** 2.4x acceleration in project delivery turnaround',
-        '**Total ROI:** Estimated 280% return over a 36-month horizon',
+        '**Year 1 Efficiency Gain:** +45% acceleration across core workflows',
+        '**Cost Optimization:** Estimated $2.4M saved in operational overhead annually',
+      ],
+      layout: 'stats',
+      metrics: [
+        { label: 'Workflow Velocity', value: '+45%' },
+        { label: 'Annual Savings', value: '$2.4M' },
+        { label: 'Satisfaction Score', value: '98%' },
+      ],
+      order: 3,
+      notes: 'Highlight the prominent metric cards and walk through the underlying drivers.',
+    },
+    {
+      title: 'Performance & Growth Trajectory',
+      subtitle: 'Year-over-Year Scaling and Adoption Rates',
+      content: 'Consistent quarter-over-quarter expansion driven by strategic deployment.',
+      bullets: [
+        '**Rapid Ramp-up:** Q1-Q2 baseline established across initial focus groups',
+        '**Compounding Return:** 280% cumulative ROI projected across 36 months',
       ],
       layout: 'chart',
-      chartTitle: 'Projected Growth & Efficiency (YoY)',
+      chartTitle: 'Adoption & Growth Trajectory (YoY)',
+      chartLabels: ['Q1', 'Q2', 'Q3', 'Q4'],
+      chartValues: [35, 60, 85, 115],
       order: 4,
-      notes: 'Highlight the high-growth trajectory on the chart and explain the contributing drivers.',
+      notes: 'Explain the high-growth trajectory on the chart and answer any financial inquiries.',
     },
     {
       title: 'Implementation Roadmap',
@@ -284,35 +291,9 @@ function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, au
         `**Phase 2 (Month 3-5):** Pilot deployment of ${k2} across initial focus groups`,
         `**Phase 3 (Month 6+):** Full-scale rollout, optimization, and continuous monitoring`,
       ],
-      layout: 'content',
+      layout: 'timeline',
       order: 5,
       notes: 'Clarify timelines and reassure leadership of the structured risk-management phases.',
-    },
-    {
-      title: 'Key Recommendations',
-      subtitle: 'Guiding Principles for Immediate Success',
-      content: `To maximize the strategic value of ${mainSubject}, we recommend focusing on three primary levers:`,
-      bullets: [
-        `**Prioritize High-Impact Wins:** Focus initial bandwidth on immediate ${k1} optimizations`,
-        `**Invest in Enablement:** Equip teams with training and tools needed for ${k2}`,
-        '**Establish Clear KPIs:** Track milestones weekly to maintain organizational accountability',
-      ],
-      layout: 'two-column',
-      order: 6,
-      notes: 'Provide direct, unambiguous recommendations that leadership can approve.',
-    },
-    {
-      title: 'Next Steps & Call to Action',
-      subtitle: 'Moving from Strategy to Execution',
-      content: `The window of opportunity to lead in ${k1} is open now. Here is how we get started:`,
-      bullets: [
-        'Approve the proposed implementation charter and resource allocation',
-        'Finalize key working group members and project leads',
-        'Schedule kickoff session for Phase 1 execution next week',
-      ],
-      layout: 'content',
-      order: 7,
-      notes: 'Close with confidence. Open the floor for questions and prompt the decision-maker for sign-off.',
     },
   ];
 
@@ -328,7 +309,7 @@ export async function generateSlides(config = {}) {
     try {
       return await generateWithGemini(gemini, config);
     } catch (err) {
-      console.error('⚠️  Gemini generation failed, falling back to smart engine:', err.message);
+      console.error('⚠️ Gemini generation failed, falling back to smart engine:', err.message);
     }
   }
 
@@ -358,6 +339,7 @@ Title: ${slide.title}
 Subtitle: ${slide.subtitle || ''}
 Content: ${slide.content || ''}
 Bullets: ${JSON.stringify(slide.bullets || [])}
+Layout: ${slide.layout || 'content'}
 Speaker Notes: ${slide.notes || ''}
 
 Return ONLY a valid JSON object matching:
@@ -366,12 +348,16 @@ Return ONLY a valid JSON object matching:
   "subtitle": "string",
   "content": "string",
   "bullets": ["string"],
+  "imagePrompt": "string",
   "notes": "string"
 }`;
       const result = await model.generateContent(prompt);
       const jsonMatch = result.response.text().trim().match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.imagePrompt) {
+          parsed.imageUrl = generateImageUrl(parsed.imagePrompt, slide.order || 0);
+        }
         return { ...slide, ...parsed };
       }
     } catch (err) {

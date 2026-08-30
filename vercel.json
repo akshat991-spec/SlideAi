@@ -19,8 +19,16 @@
       "destination": "/server/src/index.js"
     },
     {
+      "source": "/assets/(.*)",
+      "destination": "/client/assets/$1"
+    },
+    {
+      "source": "/(.*\\.(?:js|css|svg|ico|png|jpg|jpeg|json|woff2?))",
+      "destination": "/client/$1"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/client/index.html"
     }
   ],
   "headers": [

@@ -128,11 +128,11 @@ Structure each slide object as follows:
 async function generateWithGemini(gemini, config) {
   const modelsToTry = [
     process.env.GEMINI_MODEL,
+    'gemini-3.5-flash',
     'gemini-3.6-flash',
-    'gemini-1.5-flash',
-    'gemini-3.7-flash',
+    'gemini-flash-latest',
+    'gemini-2.5-flash',
     'gemini-3.1-pro-preview',
-    'gemini-1.5-pro',
   ].filter(Boolean);
 
   const systemPrompt = buildMasterSystemPrompt(config);
@@ -325,7 +325,8 @@ export async function generateSlides(config = {}) {
     try {
       return await generateWithGemini(gemini, config);
     } catch (err) {
-      console.error('⚠️ Gemini generation failed, falling back to smart engine:', err.message);
+      console.error('⚠️ Gemini generation failed:', err.message);
+      throw new Error(`AI Generation failed: ${err.message}. Please try again later.`);
     }
   }
 

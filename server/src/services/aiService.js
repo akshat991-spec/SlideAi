@@ -125,6 +125,7 @@ Structure each slide object as follows:
 
 // ── Real Gemini AI Generation ──────────────────────────────────────
 
+async function generateWithGemini(gemini, config) {
   const modelsToTry = [
     process.env.GEMINI_MODEL,
     'gemini-3.6-flash',

@@ -63,12 +63,63 @@ function getPalette(themeName = 'indigo') {
   return THEME_PALETTES[themeName] || THEME_PALETTES.indigo;
 }
 
+/**
+ * Returns the best-fit PowerPoint font for the given language string.
+ * Devanagari (Hindi, Marathi, Hinglish) needs Noto Sans Devanagari;
+ * other Indic/CJK scripts each need their own Unicode font.
+ */
+function getFont(language = 'English (US)') {
+  const lang = (language || '').toLowerCase();
+
+  // Devanagari: Hindi, Marathi, Nepali, Hinglish
+  if (lang.includes('hindi') || lang.includes('\u0939\u093f\u0928\u094d\u0926\u0940') ||
+      lang.includes('marathi') || lang.includes('\u092e\u0930\u093e\u0920\u0940') ||
+      lang.includes('hinglish')) {
+    return 'Noto Sans Devanagari';
+  }
+  // Bengali
+  if (lang.includes('bengali') || lang.includes('\u09ac\u09be\u0982\u09b2\u09be')) {
+    return 'Noto Sans Bengali';
+  }
+  // Tamil
+  if (lang.includes('tamil') || lang.includes('\u0ba4\u0bae\u0bbf\u0bb4\u0bcd')) {
+    return 'Noto Sans Tamil';
+  }
+  // Telugu
+  if (lang.includes('telugu') || lang.includes('\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41')) {
+    return 'Noto Sans Telugu';
+  }
+  // Gujarati
+  if (lang.includes('gujarati') || lang.includes('\u0a97\u0ac1\u0a9c\u0ab0\u0abe\u0aa4\u0ac0')) {
+    return 'Noto Sans Gujarati';
+  }
+  // Arabic
+  if (lang.includes('arabic') || lang.includes('\u0627\u0644\u0639\u0631\u0628\u064a\u0629')) {
+    return 'Arial Unicode MS';
+  }
+  // Japanese
+  if (lang.includes('japanese') || lang.includes('\u65e5\u672c\u8a9e')) {
+    return 'MS Gothic';
+  }
+  // Chinese / Mandarin
+  if (lang.includes('chinese') || lang.includes('mandarin')) {
+    return 'Microsoft YaHei';
+  }
+  // Korean
+  if (lang.includes('korean') || lang.includes('\ud55c\uad6d\uc5b4')) {
+    return 'Malgun Gothic';
+  }
+
+  // Latin-based and all others
+  return 'Arial';
+}
+
 // ── Slide Creators ─────────────────────────────────────────────────
 
 /**
  * 1. Title / Hero Slide
  */
-function renderTitleSlide(pptx, slideData, palette, presentationMeta) {
+function renderTitleSlide(pptx, slideData, palette, presentationMeta, font) {
   const slide = pptx.addSlide();
   slide.background = { color: palette.bg };
 
@@ -118,7 +169,7 @@ function renderTitleSlide(pptx, slideData, palette, presentationMeta) {
     fontSize: 32,
     bold: true,
     color: palette.textDark,
-    fontFace: 'Arial',
+    fontFace: font,
     valign: 'top',
   });
 
@@ -130,7 +181,7 @@ function renderTitleSlide(pptx, slideData, palette, presentationMeta) {
       h: 0.8,
       fontSize: 15,
       color: palette.textMuted,
-      fontFace: 'Arial',
+      fontFace: font,
     });
   }
 
@@ -152,7 +203,7 @@ function renderTitleSlide(pptx, slideData, palette, presentationMeta) {
 /**
  * 2. Infographic Slide (Pillars & Process)
  */
-function renderInfographicSlide(pptx, slideData, palette, index, total) {
+function renderInfographicSlide(pptx, slideData, palette, index, total, font) {
   const slide = pptx.addSlide();
   slide.background = { color: palette.bg };
 
@@ -172,7 +223,7 @@ function renderInfographicSlide(pptx, slideData, palette, index, total) {
     fontSize: 22,
     bold: true,
     color: palette.textDark,
-    fontFace: 'Arial',
+    fontFace: font,
   });
 
   if (slideData.subtitle) {
@@ -183,7 +234,7 @@ function renderInfographicSlide(pptx, slideData, palette, index, total) {
       h: 0.4,
       fontSize: 12,
       color: palette.accent,
-      fontFace: 'Arial',
+      fontFace: font,
     });
   }
 
@@ -246,7 +297,7 @@ function renderInfographicSlide(pptx, slideData, palette, index, total) {
       fontSize: 13,
       bold: true,
       color: palette.textDark,
-      fontFace: 'Arial',
+      fontFace: font,
       valign: 'top',
     });
 
@@ -258,7 +309,7 @@ function renderInfographicSlide(pptx, slideData, palette, index, total) {
       h: 2.8,
       fontSize: 11,
       color: palette.textMuted,
-      fontFace: 'Arial',
+      fontFace: font,
       valign: 'top',
     });
   });
@@ -281,7 +332,7 @@ function renderInfographicSlide(pptx, slideData, palette, index, total) {
 /**
  * 3. Image-Right Slide
  */
-function renderImageRightSlide(pptx, slideData, palette, index, total) {
+function renderImageRightSlide(pptx, slideData, palette, index, total, font) {
   const slide = pptx.addSlide();
   slide.background = { color: palette.bg };
 
@@ -301,7 +352,7 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
     fontSize: 22,
     bold: true,
     color: palette.textDark,
-    fontFace: 'Arial',
+    fontFace: font,
   });
 
   if (slideData.subtitle) {
@@ -312,7 +363,7 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
       h: 0.4,
       fontSize: 12,
       color: palette.accent,
-      fontFace: 'Arial',
+      fontFace: font,
     });
   }
 
@@ -339,7 +390,7 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
       y: 2.0,
       w: leftW - 0.6,
       h: 4.4,
-      fontFace: 'Arial',
+      fontFace: font,
       valign: 'top',
     }
   );
@@ -389,7 +440,7 @@ function renderImageRightSlide(pptx, slideData, palette, index, total) {
 /**
  * 4. Image-Left Slide
  */
-function renderImageLeftSlide(pptx, slideData, palette, index, total) {
+function renderImageLeftSlide(pptx, slideData, palette, index, total, font) {
   const slide = pptx.addSlide();
   slide.background = { color: palette.bg };
 
@@ -409,7 +460,7 @@ function renderImageLeftSlide(pptx, slideData, palette, index, total) {
     fontSize: 22,
     bold: true,
     color: palette.textDark,
-    fontFace: 'Arial',
+    fontFace: font,
   });
 
   if (slideData.subtitle) {
@@ -420,7 +471,7 @@ function renderImageLeftSlide(pptx, slideData, palette, index, total) {
       h: 0.4,
       fontSize: 12,
       color: palette.accent,
-      fontFace: 'Arial',
+      fontFace: font,
     });
   }
 
@@ -475,7 +526,7 @@ function renderImageLeftSlide(pptx, slideData, palette, index, total) {
       y: 2.0,
       w: rightW - 0.6,
       h: 4.4,
-      fontFace: 'Arial',
+      fontFace: font,
       valign: 'top',
     }
   );
@@ -498,7 +549,7 @@ function renderImageLeftSlide(pptx, slideData, palette, index, total) {
 /**
  * 5. Stats / KPI Slide
  */
-function renderStatsSlide(pptx, slideData, palette, index, total) {
+function renderStatsSlide(pptx, slideData, palette, index, total, font) {
   const slide = pptx.addSlide();
   slide.background = { color: palette.bg };
 
@@ -518,7 +569,7 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
     fontSize: 22,
     bold: true,
     color: palette.textDark,
-    fontFace: 'Arial',
+    fontFace: font,
   });
 
   if (slideData.subtitle) {
@@ -529,7 +580,7 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
       h: 0.4,
       fontSize: 12,
       color: palette.accent,
-      fontFace: 'Arial',
+      fontFace: font,
     });
   }
 
@@ -581,7 +632,7 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
       fontSize: 12,
       color: palette.textDark,
       align: 'center',
-      fontFace: 'Arial',
+      fontFace: font,
     });
   });
 
@@ -602,7 +653,7 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
       y: 5.1,
       w: 11.1,
       h: 1.4,
-      fontFace: 'Arial',
+      fontFace: font,
       valign: 'top',
     });
   }
@@ -625,7 +676,7 @@ function renderStatsSlide(pptx, slideData, palette, index, total) {
 /**
  * 6. Chart Slide
  */
-function renderChartSlide(pptx, slideData, palette, index, total) {
+function renderChartSlide(pptx, slideData, palette, index, total, font) {
   const slide = pptx.addSlide();
   slide.background = { color: palette.bg };
 
@@ -645,7 +696,7 @@ function renderChartSlide(pptx, slideData, palette, index, total) {
     fontSize: 22,
     bold: true,
     color: palette.textDark,
-    fontFace: 'Arial',
+    fontFace: font,
   });
 
   if (slideData.subtitle) {
@@ -656,7 +707,7 @@ function renderChartSlide(pptx, slideData, palette, index, total) {
       h: 0.4,
       fontSize: 12,
       color: palette.accent,
-      fontFace: 'Arial',
+      fontFace: font,
     });
   }
 
@@ -677,7 +728,7 @@ function renderChartSlide(pptx, slideData, palette, index, total) {
     y: 2.1,
     w: leftW - 0.6,
     h: 4.2,
-    fontFace: 'Arial',
+    fontFace: font,
     valign: 'top',
   });
 
@@ -726,7 +777,7 @@ function renderChartSlide(pptx, slideData, palette, index, total) {
 /**
  * 7. Standard Content Slide
  */
-function renderContentSlide(pptx, slideData, palette, index, total) {
+function renderContentSlide(pptx, slideData, palette, index, total, font) {
   const slide = pptx.addSlide();
   slide.background = { color: palette.bg };
 
@@ -746,7 +797,7 @@ function renderContentSlide(pptx, slideData, palette, index, total) {
     fontSize: 22,
     bold: true,
     color: palette.textDark,
-    fontFace: 'Arial',
+    fontFace: font,
   });
 
   if (slideData.subtitle) {
@@ -757,7 +808,7 @@ function renderContentSlide(pptx, slideData, palette, index, total) {
       h: 0.4,
       fontSize: 12,
       color: palette.accent,
-      fontFace: 'Arial',
+      fontFace: font,
     });
   }
 
@@ -780,7 +831,7 @@ function renderContentSlide(pptx, slideData, palette, index, total) {
       h: 0.7,
       fontSize: 11,
       color: palette.textDark,
-      fontFace: 'Arial',
+      fontFace: font,
       valign: 'middle',
     });
 
@@ -822,7 +873,7 @@ function renderContentSlide(pptx, slideData, palette, index, total) {
         h: itemHeight,
         fontSize: 11,
         color: palette.textDark,
-        fontFace: 'Arial',
+        fontFace: font,
         valign: 'middle',
       });
     });
@@ -856,6 +907,9 @@ export async function generatePptxBuffer(presentation) {
   const themeName = presentation.theme?.colorTheme || presentation.colorTheme || 'indigo';
   const palette = getPalette(themeName);
 
+  // Select the right Unicode font based on the presentation language
+  const font = getFont(presentation.language || 'English (US)');
+
   const slides = presentation.slides || [];
   const total = slides.length;
 
@@ -864,26 +918,26 @@ export async function generatePptxBuffer(presentation) {
 
     switch (layout) {
       case 'title':
-        renderTitleSlide(pptx, slide, palette, presentation);
+        renderTitleSlide(pptx, slide, palette, presentation, font);
         break;
       case 'infographic':
-        renderInfographicSlide(pptx, slide, palette, index, total);
+        renderInfographicSlide(pptx, slide, palette, index, total, font);
         break;
       case 'image-right':
-        renderImageRightSlide(pptx, slide, palette, index, total);
+        renderImageRightSlide(pptx, slide, palette, index, total, font);
         break;
       case 'image-left':
-        renderImageLeftSlide(pptx, slide, palette, index, total);
+        renderImageLeftSlide(pptx, slide, palette, index, total, font);
         break;
       case 'stats':
-        renderStatsSlide(pptx, slide, palette, index, total);
+        renderStatsSlide(pptx, slide, palette, index, total, font);
         break;
       case 'chart':
-        renderChartSlide(pptx, slide, palette, index, total);
+        renderChartSlide(pptx, slide, palette, index, total, font);
         break;
       case 'content':
       default:
-        renderContentSlide(pptx, slide, palette, index, total);
+        renderContentSlide(pptx, slide, palette, index, total, font);
         break;
     }
   });

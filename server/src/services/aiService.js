@@ -127,12 +127,12 @@ Structure each slide object as follows:
 
 async function generateWithGemini(gemini, config) {
   const modelsToTry = [
-    process.env.GEMINI_MODEL,
-    'gemini-3.5-flash',
-    'gemini-3.6-flash',
-    'gemini-flash-latest',
-    'gemini-2.5-flash',
-    'gemini-3.1-pro-preview',
+    process.env.GEMINI_MODEL,       // Use env override if set
+    'gemini-2.0-flash',             // Fast, capable, free tier
+    'gemini-2.5-flash-preview-04-17', // Latest flash preview
+    'gemini-2.5-flash',             // Stable 2.5 flash
+    'gemini-1.5-flash',             // Reliable fallback
+    'gemini-1.5-pro',               // Pro fallback
   ].filter(Boolean);
 
   const systemPrompt = buildMasterSystemPrompt(config);
@@ -348,7 +348,7 @@ export async function enhanceSlide(slide, instruction = '') {
 
   if (gemini) {
     try {
-      const model = gemini.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-3.6-flash' });
+      const model = gemini.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.0-flash' });
       const prompt = `You are an expert slide editor and visual presentation architect. Enhance this presentation slide based on this instruction: "${instruction}".
 
 Original Slide:

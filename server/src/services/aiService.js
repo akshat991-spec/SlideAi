@@ -59,7 +59,15 @@ Presentation Type: ${presentationType}
 Tone / Style: ${visualStyle} (${tone})
 Target Audience: ${audience}
 Primary Objective: ${purpose}
-Language: ${language} (CRITICAL: Generate ALL slide titles, subtitles, content, bullet points, infographic labels, metrics, and presenter speaker notes ENTIRELY in ${language}!)
+Language: ${language}
+
+## CRITICAL LANGUAGE & JSON ENUM RULES:
+1. ALL human-facing text ("title", "subtitle", "content", "bullets", "notes", infographic "title" and "description", metric "label") MUST be written completely and naturally in ${language}.
+2. ALL JSON keys and structural enum values MUST REMAIN IN ENGLISH.
+   - For "layout", use ONLY one of: "title", "content", "image-right", "image-left", "two-column", "chart", "stats", "timeline", "infographic". DO NOT translate layout names.
+   - For "infographicType", use ONLY one of: "pillars", "process", "funnel", "matrix", "none".
+   - For "chartValues", use standard ASCII numbers (e.g. [35, 55, 78, 100]), never translated numerals or symbols.
+   - For "step", use standard integers (1, 2, 3, 4).
 
 ## USER'S PRESENTATION REQUEST
 ${fullUserPrompt}
@@ -125,6 +133,49 @@ Structure each slide object as follows:
 
 // ── Real Gemini AI Generation ──────────────────────────────────────
 
+function toAsciiNumber(val, fallback = 0) {
+  if (typeof val === 'number') return isNaN(val) ? fallback : val;
+  if (!val) return fallback;
+  // Convert Hindi/Devanagari numerals ०-९ (0x0966-0x096F) to standard 0-9
+  const converted = String(val).replace(/[\u0966-\u096F]/g, (d) => d.charCodeAt(0) - 0x0966);
+  const num = parseFloat(converted.replace(/[^0-9.-]/g, ''));
+  return isNaN(num) ? fallback : num;
+}
+
+const VALID_LAYOUTS = new Set([
+  'title', 'content', 'two-column', 'image-left', 'image-right',
+  'chart', 'stats', 'timeline', 'infographic', 'blank'
+]);
+
+function normalizeLayout(rawLayout, defaultLayout = 'content') {
+  if (!rawLayout || typeof rawLayout !== 'string') return defaultLayout;
+  const l = rawLayout.toLowerCase().trim();
+  if (VALID_LAYOUTS.has(l)) return l;
+  if (l.includes('title') || l.includes('hero') || l.includes('cover') || l.includes('शीर्षक')) return 'title';
+  if (l.includes('chart') || l.includes('graph') || l.includes('ग्राफ') || l.includes('ग्राफ़')) return 'chart';
+  if (l.includes('stat') || l.includes('metric') || l.includes('kpi') || l.includes('आंकड़े') || l.includes('संख्या')) return 'stats';
+  if (l.includes('time') || l.includes('road') || l.includes('समय') || l.includes('रोडमैप')) return 'timeline';
+  if (l.includes('info') || l.includes('pillar') || l.includes('process') || l.includes('स्तंभ') || l.includes('प्रक्रिया')) return 'infographic';
+  if (l.includes('two') || l.includes('col') || l.includes('दो') || l.includes('कॉलम')) return 'two-column';
+  if (l.includes('image') || l.includes('चित्र') || l.includes('फोटो')) {
+    return (l.includes('left') || l.includes('बाएं') || l.includes('बाएँ')) ? 'image-left' : 'image-right';
+  }
+  return defaultLayout;
+}
+
+const VALID_INFOGRAPHICS = new Set(['process', 'funnel', 'matrix', 'pillars', 'none']);
+
+function normalizeInfographicType(rawType, layout) {
+  if (!rawType || typeof rawType !== 'string') return layout === 'infographic' ? 'pillars' : 'none';
+  const t = rawType.toLowerCase().trim();
+  if (VALID_INFOGRAPHICS.has(t)) return t;
+  if (t.includes('process') || t.includes('प्रक्रिया') || t.includes('चरण')) return 'process';
+  if (t.includes('funnel') || t.includes('फ़नल') || t.includes('फनल')) return 'funnel';
+  if (t.includes('matrix') || t.includes('मैट्रिक्स')) return 'matrix';
+  if (t.includes('pillar') || t.includes('स्तंभ') || t.includes('खंभा')) return 'pillars';
+  return layout === 'infographic' ? 'pillars' : 'none';
+}
+
 async function generateWithGemini(gemini, config) {
   const modelsToTry = [
     process.env.GEMINI_MODEL,
@@ -142,45 +193,66 @@ async function generateWithGemini(gemini, config) {
       console.log(`🤖 Attempting presentation generation with ${modelName}...`);
       const model = gemini.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(systemPrompt);
-      const responseText = result.response.text().trim();
+      let responseText = result.response.text().trim();
+      responseText = responseText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
 
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
         throw new Error(`Model ${modelName} did not return a valid JSON array`);
       }
 
-      const rawSlides = JSON.parse(jsonMatch[0]);
+      let cleanJson = jsonMatch[0].replace(/,\s*([\]}])/g, '$1');
+      const rawSlides = JSON.parse(cleanJson);
       return rawSlides.map((s, i) => {
-        const layout = s.layout || (i === 0 ? 'title' : 'content');
+        const layout = normalizeLayout(s.layout, i === 0 ? 'title' : 'content');
         const imagePrompt = s.imagePrompt || s.title || config.prompt;
         const imageUrl = ['image-left', 'image-right', 'title'].includes(layout)
           ? generateImageUrl(imagePrompt, i)
           : '';
 
+        const infographicType = normalizeInfographicType(s.infographicType, layout);
+        const infographicData = Array.isArray(s.infographicData) && s.infographicData.length > 0
+          ? s.infographicData.map((item, idx) => ({
+              step: toAsciiNumber(item.step, idx + 1),
+              title: String(item.title || `बिंदु ${idx + 1}`),
+              description: String(item.description || ''),
+              value: String(item.value || `0${idx + 1}`),
+            }))
+          : [
+              { step: 1, title: 'रणनीतिक योजना', description: 'प्राथमिक विश्लेषण और डेटा एकत्रीकरण।', value: '01' },
+              { step: 2, title: 'प्रक्रिया कार्यान्वयन', description: 'समयबद्ध और कुशल क्रियान्वयन प्रणाली।', value: '02' },
+              { step: 3, title: 'दीर्घकालिक प्रभाव', description: 'सतत विकास और मापनीय सफलता।', value: '03' },
+            ];
+
+        const chartValues = Array.isArray(s.chartValues) && s.chartValues.length > 0
+          ? s.chartValues.map((v) => toAsciiNumber(v, 50))
+          : [35, 55, 78, 100];
+
+        const metrics = Array.isArray(s.metrics) && s.metrics.length > 0
+          ? s.metrics.map((m) => ({
+              label: String(m.label || 'प्रमुख मीट्रिक'),
+              value: String(m.value || '100%'),
+            }))
+          : [
+              { label: 'प्रभाव', value: '+45%' },
+              { label: 'दक्षता', value: '2.5x' },
+            ];
+
         return {
-          title: s.title || `Slide ${i + 1}`,
-          subtitle: s.subtitle || '',
-          content: s.content || '',
-          bullets: Array.isArray(s.bullets) ? s.bullets : [],
+          title: String(s.title || `Slide ${i + 1}`),
+          subtitle: String(s.subtitle || ''),
+          content: String(s.content || ''),
+          bullets: Array.isArray(s.bullets) ? s.bullets.map(String) : [],
           layout,
           imageUrl,
-          imagePrompt,
-          infographicType: s.infographicType || (layout === 'infographic' ? 'pillars' : 'none'),
-          infographicData: Array.isArray(s.infographicData) && s.infographicData.length > 0
-            ? s.infographicData
-            : [
-                { step: 1, title: 'Intelligent Ingestion', description: 'Real-time telemetry and data synthesis.', value: '01' },
-                { step: 2, title: 'Adaptive Core', description: 'Autonomous optimization with continuous feedback.', value: '02' },
-                { step: 3, title: 'Enterprise Scaling', description: 'Zero-downtime distributed deployment.', value: '03' },
-              ],
-          chartTitle: s.chartTitle || '',
-          chartLabels: Array.isArray(s.chartLabels) && s.chartLabels.length > 0 ? s.chartLabels : ['Q1', 'Q2', 'Q3', 'Q4'],
-          chartValues: Array.isArray(s.chartValues) && s.chartValues.length > 0 ? s.chartValues : [35, 55, 78, 100],
-          metrics: Array.isArray(s.metrics) && s.metrics.length > 0 ? s.metrics : [
-            { label: 'Projected Impact', value: '+45%' },
-            { label: 'Time Saved', value: '2.5x' }
-          ],
-          notes: s.notes || '',
+          imagePrompt: String(imagePrompt),
+          infographicType,
+          infographicData,
+          chartTitle: String(s.chartTitle || ''),
+          chartLabels: Array.isArray(s.chartLabels) && s.chartLabels.length > 0 ? s.chartLabels.map(String) : ['Q1', 'Q2', 'Q3', 'Q4'],
+          chartValues,
+          metrics,
+          notes: String(s.notes || ''),
           order: i,
         };
       });
@@ -216,7 +288,90 @@ function extractKeywords(prompt) {
   return words.length > 0 ? words : ['innovation', 'strategy', 'growth'];
 }
 
-function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience, notesText = '') {
+function buildHindiFallbackSlides(prompt, slideCount, presentationType, audience) {
+  const count = slideCount > 0 ? slideCount : 5;
+  const p = prompt.trim() || 'पर्यावरण और प्रकृति संरक्षण';
+  const slides = [
+    {
+      title: `${p}: एक व्यापक रणनीतिक दृष्टिकोण`,
+      subtitle: `${presentationType} • ${audience} के लिए • ${new Date().getFullYear()}`,
+      content: `यह प्रस्तुति "${p}" के महत्वपूर्ण पहलुओं, चुनौतियों और रणनीतिक समाधानों पर केंद्रित है।`,
+      bullets: [],
+      layout: 'title',
+      imageUrl: generateImageUrl(p + ' green nature', 0),
+      order: 0,
+      notes: `सभी का स्वागत है। आज हम "${p}" पर विस्तार से चर्चा करेंगे और प्रमुख बिंदुओं को समझेंगे।`,
+    },
+    {
+      title: 'वर्तमान स्थिति और मुख्य चुनौतियां',
+      subtitle: 'समस्याओं की गहराई और उनका प्रभाव',
+      content: 'वर्तमान समय में पारंपरिक प्रणालियां बढ़ती मांगों और पर्यावरणीय दबावों का सामना करने में असमर्थ हैं।',
+      bullets: [
+        '**गंभीर असंतुलन:** संसाधनों का अनियंत्रित उपयोग और प्रक्रियागत जटिलताएं संकट को बढ़ा रही हैं',
+        '**दक्षता की कमी:** पुरानी रणनीतियों में 65% तक अधिक समय और संसाधन खर्च होते हैं',
+        '**तत्काल आवश्यकता:** नवाचार और आधुनिक तकनीकों को अपनाना अब अनिवार्य हो चुका है',
+      ],
+      layout: 'image-right',
+      imageUrl: generateImageUrl(p + ' challenge problem', 1),
+      order: 1,
+      notes: 'इस स्लाइड पर मुख्य संकट और निष्क्रियता के परिणामों पर बल दें।',
+    },
+    {
+      title: 'रणनीतिक समाधान के तीन मुख्य स्तंभ',
+      subtitle: 'संरचनात्मक ढांचा और कार्यप्रणाली',
+      content: 'हमारा एकीकृत ढांचा समयबद्ध और उच्च प्रभाव वाले परिणामों के लिए डिज़ाइन किया गया है।',
+      bullets: [],
+      layout: 'infographic',
+      infographicType: 'pillars',
+      infographicData: [
+        { step: 1, title: 'जागरूकता व संरक्षण', description: 'व्यापक स्तर पर जनजागरण और सक्रिय सामुदायिक भागीदारी।', value: 'स्तंभ ०१' },
+        { step: 2, title: 'सस्टेनेबल तकनीक', description: 'पर्यावरण-अनुकूल और ऊर्जा-कुशल तकनीकों का त्वरित उपयोग।', value: 'स्तंभ ०२' },
+        { step: 3, title: 'नीतिगत क्रियान्वयन', description: 'मजबूत निगरानी, जवाबदेही और सतत परिणाम सुनिश्चित करना।', value: 'स्तंभ ०३' },
+      ],
+      order: 2,
+      notes: 'तीनों प्रमुख स्तंभों का वर्णन करें ताकि योजना की स्पष्टता स्थापित हो सके।',
+    },
+    {
+      title: 'प्रमुख मैट्रिक्स और अपेक्षित प्रभाव',
+      subtitle: 'मापने योग्य सुधार और सांख्यिकी',
+      content: 'प्रस्तावित कार्ययोजना के क्रियान्वयन के बाद अनुमानित सकारात्मक परिवर्तन।',
+      bullets: [
+        '**कार्यकुशलता में सुधार:** प्राथमिक लक्ष्यों में 45% तक की तीव्र प्रगति',
+        '**संसाधन बचत:** परिचालन लागत में महत्वपूर्ण कटौती और उच्च प्रतिफल',
+      ],
+      layout: 'stats',
+      metrics: [
+        { label: 'सकारात्मक प्रभाव', value: '+45%' },
+        { label: 'संसाधन दक्षता', value: '3x' },
+        { label: 'भागीदारी दर', value: '95%' },
+      ],
+      order: 3,
+      notes: 'संख्यात्मक आंकड़ों पर ध्यान केंद्रित करें और उनकी प्रामाणिकता समझाएं।',
+    },
+    {
+      title: 'क्रियान्वयन रोडमैप और मील के पत्थर',
+      subtitle: 'चरणबद्ध योजना और रणनीतिक कदम',
+      content: 'न्यूनतम व्यवधान और अधिकतम गति सुनिश्चित करने के लिए संरचित चरण।',
+      bullets: [
+        '**चरण १ (माह १-२):** आधारभूत विश्लेषण, संसाधन आवंटन और प्रारंभिक योजना',
+        '**चरण २ (माह ३-५):** पायलट प्रोजेक्ट का शुभारंभ और प्रारंभिक मूल्यांकन',
+        '**चरण ३ (माह ६+):** पूर्ण पैमाने पर कार्यान्वयन और सतत निगरानी',
+      ],
+      layout: 'timeline',
+      order: 4,
+      notes: 'समय-सीमा स्पष्ट करें और नेतृत्व को विश्वास दिलाएं।',
+    },
+  ];
+
+  return slides.slice(0, count).map((s, i) => ({ ...s, order: i }));
+}
+
+function buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience, notesText = '', language = 'English (US)') {
+  const isHindi = /hindi|हिन्दी|hinglish/i.test(language);
+  if (isHindi) {
+    return buildHindiFallbackSlides(prompt, slideCount, presentationType, audience);
+  }
+
   const keywords = extractKeywords(prompt + (notesText ? ' ' + notesText : ''));
   const mainSubject = keywords.slice(0, 4).map(capitalize).join(' ') || 'Strategic Overview';
   const k1 = keywords[0] || 'core initiatives';
@@ -338,8 +493,8 @@ export async function generateSlides(config = {}) {
     language = 'English (US)',
   } = config;
 
-  console.log(`⚡ Using smart contextual engine for prompt: "${prompt}"`);
-  return buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience, notesText);
+  console.log(`⚡ Using smart contextual engine for prompt: "${prompt}" (language: ${language})`);
+  return buildSmartFallbackSlides(prompt, slideCount, tone, presentationType, audience, notesText, language);
 }
 
 export async function enhanceSlide(slide, instruction = '') {
